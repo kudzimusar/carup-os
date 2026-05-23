@@ -194,13 +194,13 @@ function AppContent() {
                   <button className={`nav-tab-btn ${activeTab === 'history' ? 'active' : ''}`} onClick={() => setActiveTab('history')}>
                     <FileText size={16} /> Registry Pass
                   </button>
-                  <button className={`nav-tab-btn ${activeTab === 'ocr' ? 'active' : ''}`} onClick={() => setActiveTab('ocr')}>
+                  <button data-testid="btn-gutu" className={`nav-tab-btn ${activeTab === 'ocr' ? 'active' : ''}`} onClick={() => setActiveTab('ocr')}>
                     <CheckSquare size={16} /> Gutu OCR
                   </button>
-                  <button className={`nav-tab-btn ${activeTab === 'partsentry' ? 'active' : ''}`} onClick={() => setActiveTab('partsentry')}>
+                  <button data-testid="btn-partsentry" className={`nav-tab-btn ${activeTab === 'partsentry' ? 'active' : ''}`} onClick={() => setActiveTab('partsentry')}>
                     <Key size={16} /> PartSentry
                   </button>
-                  <button className={`nav-tab-btn ${activeTab === 'safepay' ? 'active' : ''}`} onClick={() => setActiveTab('safepay')}>
+                  <button data-testid="btn-safepay" className={`nav-tab-btn ${activeTab === 'safepay' ? 'active' : ''}`} onClick={() => setActiveTab('safepay')}>
                     <Shield size={16} /> SafePay Escrow
                   </button>
                 </>

@@ -49,16 +49,15 @@ import puppeteer from 'puppeteer';
         report.emojiCheck = true;
       }
 
-      const clickByText = async (text) => {
-        return await page.evaluate((searchText) => {
-            const elements = Array.from(document.querySelectorAll('button, a, div[role="button"], li'));
-            const target = elements.find(el => el.textContent && el.textContent.toLowerCase().includes(searchText.toLowerCase()));
+      const clickByTestId = async (testId) => {
+        return await page.evaluate((id) => {
+            const target = document.querySelector(`[data-testid="${id}"]`);
             if (target) {
                 target.click();
                 return true;
             }
             return false;
-        }, text);
+        }, testId);
       };
 
       const isTextVisible = async (text) => {
@@ -67,7 +66,7 @@ import puppeteer from 'puppeteer';
         }, text);
       };
 
-      if (await clickByText('Gutu')) {
+      if (await clickByTestId('btn-gutu')) {
          report.logs.push('Clicked Gutu OCR button/link.');
          await new Promise(r => setTimeout(r, 1000));
          if (await isTextVisible('Document') || await isTextVisible('Upload') || await isTextVisible('Registry')) {
@@ -82,7 +81,7 @@ import puppeteer from 'puppeteer';
 
       await page.goto('http://localhost:3030/', { waitUntil: 'networkidle2' });
 
-      if (await clickByText('PartSentry') || await clickByText('Ledger')) {
+      if (await clickByTestId('btn-partsentry')) {
          report.logs.push('Clicked PartSentry button/link.');
          await new Promise(r => setTimeout(r, 1000));
          report.partSentryFlow = true;
@@ -93,7 +92,7 @@ import puppeteer from 'puppeteer';
 
       await page.goto('http://localhost:3030/', { waitUntil: 'networkidle2' });
 
-      if (await clickByText('SafePay') || await clickByText('Escrow')) {
+      if (await clickByTestId('btn-safepay')) {
          report.logs.push('Clicked SafePay button/link.');
          await new Promise(r => setTimeout(r, 1000));
          report.safePayFlow = true;
