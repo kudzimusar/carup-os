@@ -1,6 +1,7 @@
 const http = require('http');
+const { spawn } = require('child_process');
 
-const PORT = 5000;
+const PORT = Number(process.env.PORT || 5000);
 const BASE_URL = `http://localhost:${PORT}`;
 
 // Helper to make request
@@ -42,6 +43,20 @@ function request(method, path, body = null, token = null, headers = {}) {
     }
     req.end();
   });
+}
+
+
+
+async function waitForServer(maxMs = 15000) {
+  const start = Date.now();
+  while (Date.now() - start < maxMs) {
+    try {
+      const r = await request('GET', '/health');
+      if (r.status === 200) return;
+    } catch {}
+    await new Promise(r => setTimeout(r, 250));
+  }
+  throw new Error('Server did not become healthy in time');
 }
 
 async function runE2EAudit() {
@@ -245,4 +260,19 @@ async function runE2EAudit() {
   }
 }
 
-runE2EAudit();
+async function main(){
+  const child = spawn(process.execPath, ['server.js'], { stdio: 'inherit', env: process.env });
+  try {
+    await waitForServer();
+    await runE2EAudit();
+    child.kill('SIGTERM');
+  } catch (e) {
+    child.kill('SIGTERM');
+    throw e;
+  }
+}
+
+main().catch((e)=>{
+  console.error(e);
+  process.exit(1);
+});
