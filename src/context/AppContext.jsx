@@ -11,6 +11,7 @@ const initialVehicles = [
     model: "Hilux GD-6 Double Cab",
     year: 2018,
     price: 32500, // in USD
+    image: "/carup-os/assets/toyota_hilux_2018_1779548856655.png",
     mileage: 94200,
     engineNo: "1GD-7892341",
     ecuSerial: "DENSO-8921-X99",
@@ -42,7 +43,14 @@ const initialVehicles = [
       { id: "2", name: "ECU (Main Unit)", serial: "DENSO-8921-X99", status: "verified", dateInstalled: "2018-03-01", workshop: "Toyota Factory", hash: "9f8c7b6a5d4e" },
       { id: "3", name: "Transmission / Gearbox", serial: "GB-52A-9901", status: "verified", dateInstalled: "2018-03-01", workshop: "Toyota Factory", hash: "0a1b2c3d4e5f" },
       { id: "4", name: "Turbocharger Unit", serial: "TB-HILUX-33", status: "verified", dateInstalled: "2022-09-14", workshop: "Croco Motors", hash: "a3b4c5d6e7f8" }
-    ]
+    ],
+    telemetry: {
+      engineHealth: "94%",
+      chassisScan: "Minor Wear",
+      coordinates: { lat: -17.825166, lng: 31.033510 },
+      batteryVoltage: "12.6V",
+      fuelLevel: "60%"
+    }
   },
   {
     vin: "JAPFIT1500GD88219",
@@ -51,6 +59,7 @@ const initialVehicles = [
     model: "Fit Hybrid",
     year: 2016,
     price: 6800, // in USD
+    image: "/carup-os/assets/honda_fit_2016_1779548874323.png",
     mileage: 145000,
     engineNo: "L15B-3382104",
     ecuSerial: "KEIHIN-FIT-22",
@@ -78,7 +87,14 @@ const initialVehicles = [
       { id: "1", name: "Engine Block", serial: "L15B-3382104", status: "unverified", dateInstalled: "Unknown", workshop: "Japanese Import", hash: "x3y2z1w0v9u8" },
       { id: "2", name: "ECU (Main Unit)", serial: "KEIHIN-FIT-22", status: "unverified", dateInstalled: "Unknown", workshop: "Japanese Import", hash: "u8v9w0x1y2z3" },
       { id: "3", name: "Transmission / Gearbox", serial: "CVT-HN-882", status: "unverified", dateInstalled: "Unknown", workshop: "Japanese Import", hash: "z3x2c1v0b9n8" }
-    ]
+    ],
+    telemetry: {
+      engineHealth: "82%",
+      chassisScan: "Needs Alignment",
+      coordinates: { lat: -20.142921, lng: 28.582833 },
+      batteryVoltage: "11.9V",
+      fuelLevel: "25%"
+    }
   },
   {
     vin: "SADLC1508K0021485",
@@ -87,6 +103,7 @@ const initialVehicles = [
     model: "Land Cruiser Prado TZ-G",
     year: 2019,
     price: 49500, // in USD
+    image: "/carup-os/assets/toyota_prado_2019_1779548889653.png",
     mileage: 62000,
     engineNo: "1KD-9983412",
     ecuSerial: "DENSO-LC-900",
@@ -117,7 +134,14 @@ const initialVehicles = [
       { id: "1", name: "Engine Block", serial: "1KD-9983412", status: "verified", dateInstalled: "2019-08-01", workshop: "Toyota Factory", hash: "f8e7d6c5b4a3" },
       { id: "2", name: "ECU (Main Unit)", serial: "DENSO-LC-900", status: "verified", dateInstalled: "2019-08-01", workshop: "Toyota Factory", hash: "a3b4c5d6e7f8" },
       { id: "3", name: "Transmission / Gearbox", serial: "GB-LC-A9", status: "verified", dateInstalled: "2019-08-01", workshop: "Toyota Factory", hash: "9d8e7f6a5b4c" }
-    ]
+    ],
+    telemetry: {
+      engineHealth: "99%",
+      chassisScan: "Pristine",
+      coordinates: { lat: -18.971655, lng: 32.668341 },
+      batteryVoltage: "13.8V",
+      fuelLevel: "90%"
+    }
   }
 ]
 
@@ -138,6 +162,73 @@ export const AppProvider = ({ children }) => {
     whatsappPending: 0,
     chats: 0
   })
+
+  // Reservation Ledger / Locks state
+  const [cartLocks, setCartLocks] = useState([]);
+  const [globalLocks, setGlobalLocks] = useState([
+    { vin: "JAPFIT1500GD88219", lockedBy: "User992", expiresAt: Date.now() + 5 * 60 * 1000 }
+  ]);
+
+  // Derived backward compatible cart items list
+  const cartItems = cartLocks.map(lock => lock.vin);
+
+  // Expiration interval
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const now = Date.now();
+      setCartLocks(prev => {
+        const valid = prev.filter(lock => lock.expiresAt > now);
+        if (valid.length !== prev.length) return valid;
+        return prev;
+      });
+      setGlobalLocks(prev => {
+        const valid = prev.filter(lock => lock.expiresAt > now);
+        if (valid.length !== prev.length) return valid;
+        return prev;
+      });
+    }, 1000);
+    return () => clearInterval(interval);
+  }, []);
+
+  // Compare Intelligence state
+  const [comparedVins, setComparedVins] = useState([])
+
+  const addToCompare = (vin) => {
+    setComparedVins(prev => {
+      if (prev.includes(vin)) return prev;
+      if (prev.length >= 3) return prev; // Limit comparison to 3 vehicles at most
+      return [...prev, vin];
+    });
+  }
+
+  const removeFromCompare = (vin) => {
+    setComparedVins(prev => prev.filter(item => item !== vin));
+  }
+
+  const clearCompare = () => {
+    setComparedVins([]);
+  }
+
+  const addToCart = (vin) => {
+    setCartLocks(prev => {
+      if (prev.some(lock => lock.vin === vin)) return prev;
+      return [...prev, { vin, lockedAt: Date.now(), expiresAt: Date.now() + 15 * 60 * 1000 }];
+    });
+  }
+
+  const removeFromCart = (vin) => {
+    setCartLocks(prev => prev.filter(lock => lock.vin !== vin));
+  }
+
+  const clearCart = () => {
+    setCartLocks([]);
+  }
+
+  const extendLock = (vin) => {
+    setCartLocks(prev => prev.map(lock => 
+      lock.vin === vin ? { ...lock, expiresAt: Date.now() + 15 * 60 * 1000 } : lock
+    ));
+  }
 
   const fetchState = async () => {
     try {
@@ -181,9 +272,10 @@ export const AppProvider = ({ children }) => {
 
   // Periodic short-polling to ensure real-time reactive updates
   useEffect(() => {
-    fetchState()
-    const interval = setInterval(fetchState, 3000)
-    return () => clearInterval(interval)
+    // Backend is not implemented yet; disable polling to prevent console spam
+    // fetchState()
+    // const interval = setInterval(fetchState, 3000)
+    // return () => clearInterval(interval)
   }, [])
 
 
@@ -442,6 +534,17 @@ export const AppProvider = ({ children }) => {
       escrows,
       whatsappQueue,
       adminMetrics,
+      cartItems,
+      cartLocks,
+      globalLocks,
+      comparedVins,
+      addToCart,
+      removeFromCart,
+      clearCart,
+      extendLock,
+      addToCompare,
+      removeFromCompare,
+      clearCompare,
       uploadDocument,
       triggerPartSentryChange,
       approvePartSentrySwap,

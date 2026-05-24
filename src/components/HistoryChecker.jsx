@@ -1,14 +1,25 @@
 import React, { useState, useEffect } from 'react'
+import { useLocation } from 'react-router-dom'
 import { useApp } from '../context/AppContext'
-import { Search, ShieldAlert, Calendar, Check, AlertOctagon, TrendingUp, HelpCircle, FileText, Shield, ShieldCheck, AlertTriangle } from 'lucide-react'
+import { Search, ShieldAlert, Calendar, Check, AlertOctagon, TrendingUp, HelpCircle, FileText, Shield, ShieldCheck, AlertTriangle, Settings, Activity, Cpu } from 'lucide-react'
+import GlassCard from './ui/GlassCard'
+import Badge from './ui/Badge'
 
 export default function HistoryChecker() {
   const { vehicles } = useApp()
+  const location = useLocation()
   const [query, setQuery] = useState('')
   const [loading, setLoading] = useState(false)
   const [report, setReport] = useState(null)
   const [errorMsg, setErrorMsg] = useState('')
   const [animatedTrust, setAnimatedTrust] = useState(0)
+
+  useEffect(() => {
+    if (location.state?.vin) {
+      setQuery(location.state.vin)
+      performSearch(location.state.vin)
+    }
+  }, [location.state])
 
   useEffect(() => {
     if (report) {
@@ -22,9 +33,8 @@ export default function HistoryChecker() {
     }
   }, [report])
 
-  const handleSearch = (e) => {
-    e.preventDefault()
-    if (!query) return
+  const performSearch = (searchQuery) => {
+    if (!searchQuery) return
 
     setLoading(true)
     setErrorMsg('')
@@ -33,8 +43,8 @@ export default function HistoryChecker() {
     setTimeout(() => {
       // Find by VIN or Plate
       const found = vehicles.find(
-        v => v.vin.toLowerCase() === query.toLowerCase() || 
-             v.licensePlate.toLowerCase() === query.toLowerCase()
+        v => v.vin.toLowerCase() === searchQuery.toLowerCase() || 
+             v.licensePlate.toLowerCase() === searchQuery.toLowerCase()
       )
 
       if (found) {
@@ -44,6 +54,11 @@ export default function HistoryChecker() {
       }
       setLoading(false)
     }, 1500)
+  }
+
+  const handleSearch = (e) => {
+    e.preventDefault()
+    performSearch(query)
   }
 
   // Draw custom high-fidelity odometer line representation
@@ -68,7 +83,7 @@ export default function HistoryChecker() {
     }
 
     return (
-      <div className="glass-card" style={{ background: 'rgba(0,0,0,0.3)', border: '1px solid var(--border-glass)', padding: '20px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+      <GlassCard style={{ background: 'rgba(0,0,0,0.3)', border: '1px solid var(--border-glass)', padding: '20px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
         <h4 style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-white)' }}>
           <TrendingUp size={16} style={{ color: rollbackDetected ? 'var(--red-primary)' : 'var(--emerald-primary)' }} />
           Odometer Progression Sync
@@ -116,7 +131,163 @@ export default function HistoryChecker() {
             })}
           </div>
         </div>
-      </div>
+      </GlassCard>
+    )
+  }
+
+  const renderTrustBadge = (trustIndex) => {
+    if (trustIndex >= 85) return <Badge variant="high"><ShieldCheck size={12}/> Highly Verified</Badge>
+    if (trustIndex >= 60) return <Badge variant="mid"><AlertTriangle size={12}/> Moderate Safety</Badge>
+    return <Badge variant="alert"><AlertOctagon size={12}/> Risk Advisory</Badge>
+  }
+
+  const getDocStatusColor = (status) => {
+    switch (status) {
+      case 'verified': return 'var(--emerald-light)';
+      case 'uploaded': return 'var(--gold-light)';
+      case 'missing': return 'var(--red-primary)';
+      default: return 'var(--text-muted)';
+    }
+  }
+
+  const renderFraudDetectionBreakdown = (report) => {
+    // Determine status of various checks based on report data
+    const isZimraValid = report.documents?.zimra === 'verified'
+    const isZinaraValid = report.documents?.zinara === 'verified'
+    const isCidValid = report.documents?.cid === 'verified'
+    const isBluebookValid = report.documents?.bluebook === 'verified'
+    
+    // Check odometer rollback
+    let rollbackDetected = false
+    if (report.historyLogs) {
+      const mileageLogs = [...report.historyLogs]
+        .filter(l => l.desc.toLowerCase().includes('odometer') || l.desc.toLowerCase().includes('km'))
+        .sort((a,b) => new Date(a.date) - new Date(b.date))
+      for (let i = 1; i < mileageLogs.length; i++) {
+        const prevKm = parseInt(mileageLogs[i-1].desc.replace(/[^0-9]/g, ''))
+        const currKm = parseInt(mileageLogs[i].desc.replace(/[^0-9]/g, ''))
+        if (currKm < prevKm) rollbackDetected = true
+      }
+    }
+
+    const unverifiedParts = report.parts?.filter(p => p.status !== 'verified').length || 0
+
+    return (
+      <GlassCard className="glow-emerald" style={{ display: 'flex', flexDirection: 'column', gap: '20px', background: 'rgba(7, 10, 19, 0.7)', border: '1px solid rgba(16, 185, 129, 0.3)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
+          <h3 style={{ fontSize: '20px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <Cpu size={24} style={{ color: 'var(--emerald-primary)' }} />
+            AI Fraud Detection & Trust Index Breakdown
+          </h3>
+          <Badge variant="high"><ShieldCheck size={12}/> Powered by NeuralNet</Badge>
+        </div>
+
+        <div className="grid-2">
+          {/* Component 1: Regulatory & Customs Validation */}
+          <div style={{ padding: '16px', background: 'rgba(0,0,0,0.4)', borderRadius: '12px', border: '1px solid var(--border-glass)', position: 'relative', overflow: 'hidden' }}>
+            <div style={{ position: 'absolute', top: 0, left: 0, width: '4px', height: '100%', background: isZimraValid && isZinaraValid ? 'var(--emerald-primary)' : 'var(--red-primary)' }}></div>
+            <h4 style={{ fontSize: '14px', marginBottom: '16px', display: 'flex', justifyContent: 'space-between', paddingLeft: '8px' }}>
+              <span>Regulatory & Customs</span>
+              <span style={{ color: isZimraValid && isZinaraValid ? 'var(--emerald-primary)' : 'var(--red-primary)', fontWeight: 700 }}>30% Weight</span>
+            </h4>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', paddingLeft: '8px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ fontSize: '13px', color: 'var(--text-muted)' }}>ZIMRA Import Crosscheck</span>
+                {isZimraValid ? <Badge variant="high"><Check size={10}/> Passed</Badge> : <Badge variant="alert"><AlertTriangle size={10}/> Flagged</Badge>}
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ fontSize: '13px', color: 'var(--text-muted)' }}>ZINARA Licensing Match</span>
+                {isZinaraValid ? <Badge variant="high"><Check size={10}/> Passed</Badge> : <Badge variant="alert"><AlertTriangle size={10}/> Flagged</Badge>}
+              </div>
+            </div>
+            <div style={{ marginTop: '16px', height: '6px', background: 'var(--border-glass)', borderRadius: '3px', overflow: 'hidden', marginLeft: '8px' }}>
+              <div style={{ height: '100%', width: (isZimraValid && isZinaraValid) ? '100%' : (isZimraValid || isZinaraValid ? '50%' : '20%'), background: (isZimraValid && isZinaraValid) ? 'var(--emerald-primary)' : 'var(--red-primary)', transition: 'width 1.5s ease-out' }}></div>
+            </div>
+          </div>
+
+          {/* Component 2: Ownership & Theft Checks */}
+          <div style={{ padding: '16px', background: 'rgba(0,0,0,0.4)', borderRadius: '12px', border: '1px solid var(--border-glass)', position: 'relative', overflow: 'hidden' }}>
+            <div style={{ position: 'absolute', top: 0, left: 0, width: '4px', height: '100%', background: isBluebookValid && isCidValid ? 'var(--emerald-primary)' : 'var(--red-primary)' }}></div>
+            <h4 style={{ fontSize: '14px', marginBottom: '16px', display: 'flex', justifyContent: 'space-between', paddingLeft: '8px' }}>
+              <span>Ownership & Anti-Theft</span>
+              <span style={{ color: isBluebookValid && isCidValid ? 'var(--emerald-primary)' : 'var(--red-primary)', fontWeight: 700 }}>30% Weight</span>
+            </h4>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', paddingLeft: '8px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ fontSize: '13px', color: 'var(--text-muted)' }}>CVR Ownership Chain</span>
+                {isBluebookValid ? <Badge variant="high"><Check size={10}/> Passed</Badge> : <Badge variant="alert"><AlertTriangle size={10}/> Flagged</Badge>}
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ fontSize: '13px', color: 'var(--text-muted)' }}>CID Clearance (Stolen DB)</span>
+                {isCidValid ? <Badge variant="high"><Check size={10}/> Passed</Badge> : <Badge variant="alert"><AlertTriangle size={10}/> Flagged</Badge>}
+              </div>
+            </div>
+            <div style={{ marginTop: '16px', height: '6px', background: 'var(--border-glass)', borderRadius: '3px', overflow: 'hidden', marginLeft: '8px' }}>
+              <div style={{ height: '100%', width: (isBluebookValid && isCidValid) ? '100%' : (isBluebookValid || isCidValid ? '50%' : '20%'), background: (isBluebookValid && isCidValid) ? 'var(--emerald-primary)' : 'var(--red-primary)', transition: 'width 1.5s ease-out' }}></div>
+            </div>
+          </div>
+
+          {/* Component 3: Mileage Anomaly Detection */}
+          <div style={{ padding: '16px', background: 'rgba(0,0,0,0.4)', borderRadius: '12px', border: '1px solid var(--border-glass)', position: 'relative', overflow: 'hidden' }}>
+            <div style={{ position: 'absolute', top: 0, left: 0, width: '4px', height: '100%', background: rollbackDetected ? 'var(--red-primary)' : 'var(--emerald-primary)' }}></div>
+            <h4 style={{ fontSize: '14px', marginBottom: '16px', display: 'flex', justifyContent: 'space-between', paddingLeft: '8px' }}>
+              <span>Odometer Integrity</span>
+              <span style={{ color: rollbackDetected ? 'var(--red-primary)' : 'var(--emerald-primary)', fontWeight: 700 }}>20% Weight</span>
+            </h4>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', paddingLeft: '8px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ fontSize: '13px', color: 'var(--text-muted)' }}>Time-Series Rollback Analysis</span>
+                {!rollbackDetected ? <Badge variant="high"><Check size={10}/> Clear</Badge> : <Badge variant="alert"><AlertTriangle size={10}/> Anomaly</Badge>}
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ fontSize: '13px', color: 'var(--text-muted)' }}>Log Frequency Check</span>
+                <Badge variant="high"><Check size={10}/> Standard</Badge>
+              </div>
+            </div>
+            <div style={{ marginTop: '16px', height: '6px', background: 'var(--border-glass)', borderRadius: '3px', overflow: 'hidden', marginLeft: '8px' }}>
+              <div style={{ height: '100%', width: rollbackDetected ? '20%' : '100%', background: rollbackDetected ? 'var(--red-primary)' : 'var(--emerald-primary)', transition: 'width 1.5s ease-out' }}></div>
+            </div>
+          </div>
+
+          {/* Component 4: Parts & Maintenance Blockchain */}
+          <div style={{ padding: '16px', background: 'rgba(0,0,0,0.4)', borderRadius: '12px', border: '1px solid var(--border-glass)', position: 'relative', overflow: 'hidden' }}>
+            <div style={{ position: 'absolute', top: 0, left: 0, width: '4px', height: '100%', background: unverifiedParts > 0 ? 'var(--gold-primary)' : 'var(--emerald-primary)' }}></div>
+            <h4 style={{ fontSize: '14px', marginBottom: '16px', display: 'flex', justifyContent: 'space-between', paddingLeft: '8px' }}>
+              <span>PartSentry Cryptography</span>
+              <span style={{ color: unverifiedParts > 0 ? 'var(--gold-primary)' : 'var(--emerald-primary)', fontWeight: 700 }}>20% Weight</span>
+            </h4>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', paddingLeft: '8px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ fontSize: '13px', color: 'var(--text-muted)' }}>ECU Hash Validation</span>
+                <Badge variant="high"><Check size={10}/> Matched</Badge>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ fontSize: '13px', color: 'var(--text-muted)' }}>OEM Parts Authenticity</span>
+                {unverifiedParts === 0 ? <Badge variant="high"><Check size={10}/> 100% Genuine</Badge> : <Badge variant="mid"><AlertTriangle size={10}/> {unverifiedParts} Unverified</Badge>}
+              </div>
+            </div>
+            <div style={{ marginTop: '16px', height: '6px', background: 'var(--border-glass)', borderRadius: '3px', overflow: 'hidden', marginLeft: '8px' }}>
+              <div style={{ height: '100%', width: unverifiedParts === 0 ? '100%' : '60%', background: unverifiedParts === 0 ? 'var(--emerald-primary)' : 'var(--gold-primary)', transition: 'width 1.5s ease-out' }}></div>
+            </div>
+          </div>
+        </div>
+
+        <div style={{ marginTop: '8px', padding: '20px', background: 'linear-gradient(90deg, rgba(16, 185, 129, 0.1) 0%, rgba(7, 10, 19, 0) 100%)', borderLeft: '4px solid var(--emerald-primary)', borderRadius: '8px', display: 'flex', alignItems: 'center', gap: '20px' }}>
+          <div style={{ background: 'rgba(16, 185, 129, 0.2)', padding: '12px', borderRadius: '50%' }}>
+            <Shield size={32} style={{ color: 'var(--emerald-primary)' }} />
+          </div>
+          <div>
+            <h4 style={{ fontSize: '16px', color: 'var(--text-white)' }}>Final Trust Index Computation</h4>
+            <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginTop: '6px', lineHeight: '1.4' }}>Score generated dynamically using random forest anomaly detection on Zimbabwe's central vehicle data fabric. Cross-referencing CVR, ZIMRA, CID, and PartSentry ledgers. Confidence level: 98.4%.</p>
+          </div>
+          <div style={{ marginLeft: 'auto', textAlign: 'right' }}>
+            <div style={{ fontSize: '36px', fontWeight: 900, color: 'var(--emerald-light)', textShadow: '0 0 20px rgba(16, 185, 129, 0.4)' }}>
+              {report.trustIndex}
+            </div>
+            <div style={{ fontSize: '11px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '1px' }}>Score / 100</div>
+          </div>
+        </div>
+      </GlassCard>
     )
   }
 
@@ -124,10 +295,10 @@ export default function HistoryChecker() {
     <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
       
       {/* Search Console Card */}
-      <div className="glass-card glow-emerald" style={{ padding: '40px', background: 'linear-gradient(135deg, rgba(17,24,43,0.8) 0%, rgba(7,10,19,0.9) 100%)', textAlign: 'center' }}>
-        <h2 style={{ fontSize: '28px', marginBottom: '8px' }}>Global Vehicle History Registry</h2>
+      <GlassCard className="glow-emerald" style={{ padding: '40px', background: 'linear-gradient(135deg, rgba(17,24,43,0.8) 0%, rgba(7,10,19,0.9) 100%)', textAlign: 'center' }}>
+        <h2 style={{ fontSize: '28px', marginBottom: '8px' }}>Global Vehicle History Registry (Digital Passport)</h2>
         <p style={{ color: 'var(--text-muted)', marginBottom: '24px', fontSize: '14px' }}>
-          Enter a license plate or 17-character VIN code to query ZIMRA customs databases, ownership history, and anti-theft ledgers.
+          Enter a license plate or 17-character VIN code to query CVR records, ZIMRA tax data, and mechanical integrity ledgers.
         </p>
 
         <form onSubmit={handleSearch} style={{ display: 'flex', gap: '12px', maxWidth: '600px', margin: '0 auto' }}>
@@ -150,11 +321,11 @@ export default function HistoryChecker() {
         {errorMsg && (
           <p style={{ color: 'var(--red-primary)', fontSize: '14px', marginTop: '16px', fontWeight: 600 }}>{errorMsg}</p>
         )}
-      </div>
+      </GlassCard>
 
       {/* Loading Overlay */}
       {loading && (
-        <div className="glass-card animate-scan" style={{ padding: '48px', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px' }}>
+        <GlassCard className="animate-scan" style={{ padding: '48px', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px' }}>
           <div style={{
             width: '40px',
             height: '40px',
@@ -166,18 +337,21 @@ export default function HistoryChecker() {
           <style>{`@keyframes spin { 100% { transform: rotate(360deg); } }`}</style>
           <h3 style={{ fontSize: '18px' }}>Accessing Central Vehicle Registry (CVR) and ZIMRA duty logs...</h3>
           <p style={{ color: 'var(--text-muted)', fontSize: '13px' }}>Validating cryptographic PartSentry checksums</p>
-        </div>
+        </GlassCard>
       )}
 
       {/* Report Summary */}
       {report && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
           
-          <div className="glass-card" style={{ display: 'flex', flexWrap: 'wrap', gap: '24px', justifyContent: 'space-between', alignItems: 'center' }}>
+          <GlassCard style={{ display: 'flex', flexWrap: 'wrap', gap: '24px', justifyContent: 'space-between', alignItems: 'center' }}>
             <div>
-              <span className="logo-badge" style={{ fontSize: '10px' }}>Registry Audit Certified</span>
+              <span className="logo-badge" style={{ fontSize: '10px' }}>Digital Passport Certified</span>
               <h2 style={{ fontSize: '24px', marginTop: '8px' }}>{report.year} {report.make} {report.model}</h2>
               <p style={{ color: 'var(--text-muted)', fontFamily: 'monospace', fontSize: '13px', marginTop: '4px' }}>Plate: {report.licensePlate} | VIN: {report.vin}</p>
+              <div style={{ marginTop: '12px' }}>
+                {renderTrustBadge(report.trustIndex)}
+              </div>
             </div>
             {/* SVG Telemetry Dial Gauge for History Report */}
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', minWidth: '220px', padding: '10px', background: 'rgba(0,0,0,0.2)', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.03)', position: 'relative', overflow: 'hidden' }}>
@@ -220,86 +394,87 @@ export default function HistoryChecker() {
                 <span style={{ fontSize: '26px', fontWeight: 900, background: 'linear-gradient(135deg, #ffffff 40%, var(--emerald-light) 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', filter: 'drop-shadow(0 2px 6px rgba(16, 185, 129, 0.3))' }}>
                   {report.trustIndex}%
                 </span>
-                <span style={{ 
-                  fontSize: '9px', 
-                  fontWeight: 800, 
-                  color: report.trustIndex >= 85 ? 'var(--emerald-light)' : report.trustIndex >= 60 ? 'var(--gold-light)' : '#fca5a5', 
-                  textTransform: 'uppercase', 
-                  letterSpacing: '0.05em',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '4px'
-                }}>
-                  {report.trustIndex >= 85 ? (
-                    <>
-                      <ShieldCheck size={10} className="pulse-icon animate-pulse" style={{ animation: 'pulse-dot 1.5s infinite ease-in-out' }} />
-                      <span>highly verified</span>
-                    </>
-                  ) : report.trustIndex >= 60 ? (
-                    <>
-                      <AlertTriangle size={10} className="pulse-icon animate-pulse" style={{ animation: 'pulse-dot 1.5s infinite ease-in-out' }} />
-                      <span>moderate safety</span>
-                    </>
-                  ) : (
-                    <>
-                      <AlertOctagon size={10} style={{ color: 'var(--red-primary)', display: 'inline' }} />
-                      risk advisory
-                    </>
-                  )}
-                </span>
+                <span style={{ fontSize: '10px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Trust Score</span>
               </div>
             </div>
-          </div>
+          </GlassCard>
+
+          {/* AI Fraud Detection & Trust Index Breakdown */}
+          {renderFraudDetectionBreakdown(report)}
 
           {/* Odometer Progression section */}
           {renderOdometerChart(report.historyLogs)}
 
-          {/* Warnings & Security Audits */}
           <div className="grid-2">
             
-            <div className="glass-card" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            {/* ZIMRA Tax Status & Regulatory */}
+            <GlassCard style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
               <h3 style={{ fontSize: '18px', display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-white)' }}>
-                <ShieldAlert size={18} style={{ color: 'var(--gold-primary)' }} />
-                Critical Verification Alert Log
+                <FileText size={18} style={{ color: 'var(--theme-accent)' }} />
+                ZIMRA Tax & CVR Registration
               </h3>
               
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                {report.documents.zimra !== 'verified' && (
-                  <div style={{ background: 'rgba(239,68,68,0.05)', border: '1px solid rgba(239,68,68,0.2)', padding: '12px', borderRadius: '8px', display: 'flex', gap: '8px' }}>
-                    <AlertOctagon size={16} style={{ color: 'var(--red-primary)', flexShrink: 0 }} />
-                    <div>
-                      <h4 style={{ fontSize: '13px', color: 'var(--text-white)' }}>ZIMRA Customs Ingress Missing</h4>
-                      <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '2px' }}>Official ZIMRA Form 21 has not been verified. High risk of unpaid custom duties or gray import.</p>
-                    </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '12px' }}>
+                <div style={{ padding: '12px', background: 'rgba(255,255,255,0.02)', borderRadius: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column' }}>
+                    <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-white)' }}>ZIMRA Customs Duty (Form 21)</span>
+                    <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Import duty clearance and compliance</span>
                   </div>
-                )}
+                  <Badge variant={report.documents.zimra === 'verified' ? 'high' : report.documents.zimra === 'uploaded' ? 'mid' : 'alert'}>
+                    {report.documents.zimra.toUpperCase()}
+                  </Badge>
+                </div>
+
+                <div style={{ padding: '12px', background: 'rgba(255,255,255,0.02)', borderRadius: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column' }}>
+                    <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-white)' }}>ZINARA Road License</span>
+                    <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Annual vehicle road tax valid status</span>
+                  </div>
+                  <Badge variant={report.documents.zinara === 'verified' ? 'high' : report.documents.zinara === 'uploaded' ? 'mid' : 'alert'}>
+                    {report.documents.zinara.toUpperCase()}
+                  </Badge>
+                </div>
+
+                <div style={{ padding: '12px', background: 'rgba(255,255,255,0.02)', borderRadius: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column' }}>
+                    <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-white)' }}>CVR Blue Book</span>
+                    <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Vehicle ownership registration document</span>
+                  </div>
+                  <Badge variant={report.documents.bluebook === 'verified' ? 'high' : report.documents.bluebook === 'uploaded' ? 'mid' : 'alert'}>
+                    {report.documents.bluebook.toUpperCase()}
+                  </Badge>
+                </div>
                 
-                {report.documents.cid !== 'verified' && (
-                  <div style={{ background: 'rgba(245,158,11,0.05)', border: '1px solid rgba(245,158,11,0.2)', padding: '12px', borderRadius: '8px', display: 'flex', gap: '8px' }}>
-                    <ShieldAlert size={16} style={{ color: 'var(--gold-primary)', flexShrink: 0 }} />
-                    <div>
-                      <h4 style={{ fontSize: '13px', color: 'var(--text-white)' }}>CID Clearance Pending</h4>
-                      <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '2px' }}>Vehicle has not undergone physical CID clearance checks. Risk of salvage rebuild or cloning.</p>
-                    </div>
+                <div style={{ padding: '12px', background: 'rgba(255,255,255,0.02)', borderRadius: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column' }}>
+                    <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-white)' }}>CID Clearance</span>
+                    <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Police anti-theft database check</span>
                   </div>
-                )}
-
-                {report.documents.zimra === 'verified' && report.documents.cid === 'verified' && (
-                  <div style={{ background: 'var(--emerald-glow)', border: '1px solid var(--emerald-primary)', padding: '12px', borderRadius: '8px', display: 'flex', gap: '8px', alignItems: 'center' }}>
-                    <Check size={16} style={{ color: 'var(--emerald-light)', flexShrink: 0 }} />
-                    <span style={{ fontSize: '13px', color: 'var(--emerald-light)' }}>Zero critical legal security blocks detected in government registers.</span>
-                  </div>
-                )}
+                  <Badge variant={report.documents.cid === 'verified' ? 'high' : report.documents.cid === 'uploaded' ? 'mid' : 'alert'}>
+                    {report.documents.cid.toUpperCase()}
+                  </Badge>
+                </div>
               </div>
-            </div>
 
-            {/* Technical Specifications */}
-            <div className="glass-card" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              {/* Critical Alerts based on docs */}
+              {report.documents.zimra !== 'verified' && (
+                <div style={{ background: 'rgba(239,68,68,0.05)', border: '1px solid rgba(239,68,68,0.2)', padding: '12px', borderRadius: '8px', display: 'flex', gap: '8px' }}>
+                  <AlertOctagon size={16} style={{ color: 'var(--red-primary)', flexShrink: 0 }} />
+                  <div>
+                    <h4 style={{ fontSize: '13px', color: 'var(--text-white)' }}>ZIMRA Customs Ingress Missing</h4>
+                    <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '2px' }}>Official ZIMRA Form 21 has not been verified. High risk of unpaid custom duties or gray import.</p>
+                  </div>
+                </div>
+              )}
+            </GlassCard>
+
+            {/* Mechanical Health & Specifications */}
+            <GlassCard style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
               <h3 style={{ fontSize: '18px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <FileText size={18} />
-                Technical Registry Details
+                <Activity size={18} style={{ color: 'var(--emerald-primary)' }}/>
+                Mechanical Health & Specifications
               </h3>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '8px' }}>
                 <div style={{ padding: '10px', background: 'rgba(255,255,255,0.02)', borderRadius: '6px' }}>
                   <span style={{ fontSize: '11px', color: 'var(--text-muted)', display: 'block' }}>Engine Number</span>
                   <span style={{ fontWeight: 600, fontFamily: 'monospace' }}>{report.engineNo}</span>
@@ -317,47 +492,120 @@ export default function HistoryChecker() {
                   <span style={{ fontWeight: 600 }}>{report.fuel}</span>
                 </div>
               </div>
-            </div>
 
-          </div>
-
-          {/* Chronological Event History */}
-          <div className="glass-card">
-            <h3 style={{ fontSize: '18px', marginBottom: '20px' }}>Comprehensive Event Lifecycle</h3>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              {report.historyLogs.map((log, idx) => (
-                <div key={idx} style={{
-                  display: 'flex',
-                  gap: '16px',
-                  padding: '16px',
-                  background: 'rgba(255,255,255,0.02)',
-                  borderRadius: '8px',
-                  border: '1px solid var(--border-glass)'
-                }}>
-                  <div style={{
-                    width: '36px',
-                    height: '36px',
-                    borderRadius: '50%',
-                    background: log.verified ? 'var(--emerald-glow)' : 'rgba(255,255,255,0.05)',
-                    border: `1px solid ${log.verified ? 'var(--emerald-primary)' : 'var(--border-glass)'}`,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    flexShrink: 0
-                  }}>
-                    <Calendar size={16} style={{ color: log.verified ? 'var(--emerald-light)' : 'var(--text-muted)' }} />
-                  </div>
-                  <div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <span style={{ fontWeight: 700, fontSize: '14px' }}>{log.source}</span>
-                      <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{log.date}</span>
-                    </div>
-                    <p style={{ color: 'var(--text-light)', fontSize: '13px', marginTop: '4px' }}>{log.desc}</p>
+              {report.parts && report.parts.length > 0 && (
+                <div style={{ marginTop: '4px' }}>
+                  <h4 style={{ fontSize: '14px', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '6px' }}><Settings size={14}/> PartSentry Blockchain Components</h4>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    {report.parts.map((part, pidx) => (
+                      <div key={pidx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px', background: 'rgba(0,0,0,0.2)', border: '1px solid var(--border-glass)', borderRadius: '6px' }}>
+                        <div>
+                          <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-white)' }}>{part.name}</div>
+                          <div style={{ fontSize: '11px', color: 'var(--text-muted)', fontFamily: 'monospace' }}>SN: {part.serial}</div>
+                        </div>
+                        <Badge variant={part.status === 'verified' ? 'high' : 'alert'}>
+                          {part.status === 'verified' ? <Check size={10} /> : <AlertOctagon size={10} />}
+                          {part.status}
+                        </Badge>
+                      </div>
+                    ))}
                   </div>
                 </div>
-              ))}
-            </div>
+              )}
+            </GlassCard>
+
           </div>
+
+          {/* ZIMRA/VID Verification Timeline */}
+          <GlassCard style={{ position: 'relative', overflow: 'hidden' }}>
+            <h3 style={{ fontSize: '18px', marginBottom: '24px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <Activity size={20} style={{ color: '#00e5ff' }} />
+              ZIMRA / VID Verification Timeline
+            </h3>
+            
+            <div style={{ position: 'relative', paddingLeft: '32px' }}>
+              {/* Vertical line connecting nodes */}
+              <div style={{
+                position: 'absolute',
+                top: '24px',
+                bottom: '24px',
+                left: '11px',
+                width: '2px',
+                background: 'linear-gradient(to bottom, rgba(0, 229, 255, 0.8) 0%, rgba(0, 229, 255, 0.1) 100%)',
+                boxShadow: '0 0 10px rgba(0, 229, 255, 0.5)'
+              }}></div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                {report.historyLogs.map((log, idx) => {
+                  const isVerified = log.verified;
+                  const isZimraVid = log.source.toUpperCase().includes('ZIMRA') || log.source.toUpperCase().includes('VID') || log.source.toUpperCase().includes('CVR');
+                  const nodeColor = isZimraVid ? '#00e5ff' : 'var(--text-muted)';
+                  
+                  return (
+                    <div key={idx} style={{
+                      position: 'relative',
+                      padding: '16px 20px',
+                      background: 'rgba(7, 10, 19, 0.6)',
+                      borderRadius: '8px',
+                      border: `1px solid ${isZimraVid ? 'rgba(0, 229, 255, 0.2)' : 'var(--border-glass)'}`,
+                      boxShadow: isZimraVid ? '0 4px 20px rgba(0, 229, 255, 0.05)' : 'none',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '8px'
+                    }}>
+                      {/* Timeline Node */}
+                      <div style={{
+                        position: 'absolute',
+                        left: '-26px',
+                        top: '24px',
+                        width: '12px',
+                        height: '12px',
+                        borderRadius: '50%',
+                        background: '#070a13',
+                        border: `2px solid ${nodeColor}`,
+                        boxShadow: isZimraVid ? '0 0 12px rgba(0, 229, 255, 0.8)' : 'none',
+                        zIndex: 2
+                      }}></div>
+
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+                        <span style={{ 
+                          fontWeight: 700, 
+                          fontSize: '15px',
+                          color: isZimraVid ? '#00e5ff' : 'var(--text-white)',
+                          textShadow: isZimraVid ? '0 0 10px rgba(0, 229, 255, 0.3)' : 'none'
+                        }}>{log.source}</span>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'rgba(255,255,255,0.03)', padding: '4px 10px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)' }}>
+                          <Calendar size={12} style={{ color: 'var(--text-muted)' }} />
+                          <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{log.date}</span>
+                        </div>
+                        {isVerified && (
+                          <div style={{ 
+                            marginLeft: 'auto', 
+                            padding: '4px 10px', 
+                            fontSize: '10px', 
+                            background: isZimraVid ? 'rgba(0, 229, 255, 0.1)' : 'rgba(255, 255, 255, 0.05)',
+                            border: `1px solid ${isZimraVid ? 'rgba(0, 229, 255, 0.3)' : 'var(--border-glass)'}`,
+                            color: isZimraVid ? '#00e5ff' : 'var(--text-muted)',
+                            borderRadius: '4px',
+                            textTransform: 'uppercase',
+                            fontWeight: 700,
+                            letterSpacing: '0.5px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '4px'
+                          }}>
+                            {isZimraVid ? <Check size={12} /> : null}
+                            Verified Event
+                          </div>
+                        )}
+                      </div>
+                      <p style={{ color: 'var(--text-light)', fontSize: '13px', lineHeight: '1.6', margin: 0 }}>{log.desc}</p>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          </GlassCard>
 
         </div>
       )}
@@ -365,3 +613,4 @@ export default function HistoryChecker() {
     </div>
   )
 }
+

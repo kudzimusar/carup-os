@@ -1,13 +1,83 @@
 import React, { useState } from 'react'
+import { useLocation } from 'react-router-dom'
 import { useApp } from '../context/AppContext'
 import { DollarSign, ShieldAlert, CheckCircle, RefreshCw, Send, Smartphone, Landmark, HeartHandshake, AlertCircle } from 'lucide-react'
+import GlassCard from './ui/GlassCard'
+import Badge from './ui/Badge'
 
-export default function SafePay({ selectedVin }) {
+const EscrowTimeline = ({ status }) => {
+  let currentStep = 1;
+  if (status === 'Settled to Seller') currentStep = 4;
+  else if (status === 'Vehicle Inspected') currentStep = 2; 
+  else if (status === 'Title Transferred') currentStep = 3;
+
+  const steps = [
+    { label: 'Agreement' },
+    { label: 'Secured' },
+    { label: 'Inspection' },
+    { label: 'Title' },
+    { label: 'Released' }
+  ];
+
+  return (
+    <div style={{ marginTop: '20px', marginBottom: '16px', position: 'relative' }}>
+      {/* Background Line */}
+      <div style={{ position: 'absolute', top: '10px', left: '10%', right: '10%', height: '2px', background: 'var(--border-glass)', zIndex: 0 }} />
+      
+      {/* Active Line */}
+      <div style={{ 
+        position: 'absolute', top: '10px', left: '10%', 
+        width: `${(currentStep / (steps.length - 1)) * 80}%`, 
+        height: '2px', background: 'var(--emerald-primary)', 
+        boxShadow: '0 0 8px var(--emerald-glow)',
+        transition: 'width 0.5s ease',
+        zIndex: 0 
+      }} />
+
+      <div style={{ display: 'flex', justifyContent: 'space-between', position: 'relative', zIndex: 1 }}>
+        {steps.map((step, idx) => {
+          const isCompleted = idx <= currentStep;
+          const isCurrent = idx === currentStep;
+          return (
+            <div key={step.label} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '20%', gap: '8px' }}>
+              <div style={{
+                width: '22px', height: '22px', borderRadius: '50%',
+                background: isCompleted ? 'var(--emerald-primary)' : '#111',
+                border: isCompleted ? 'none' : '2px solid var(--border-glass)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                color: isCompleted ? '#000' : 'var(--text-muted)',
+                boxShadow: isCurrent ? '0 0 12px var(--emerald-glow)' : 'none',
+                transition: 'all 0.3s ease'
+              }}>
+                {isCompleted ? <CheckCircle size={14} /> : <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: 'var(--border-glass)' }} />}
+              </div>
+              <span style={{ 
+                fontSize: '10px', 
+                fontFamily: 'monospace',
+                textTransform: 'uppercase',
+                letterSpacing: '0.05em',
+                color: isCompleted ? (isCurrent ? 'var(--emerald-light)' : '#fff') : 'var(--text-muted)',
+                textAlign: 'center',
+                lineHeight: '1.2'
+              }}>
+                {step.label}
+              </span>
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  );
+};
+
+export default function SafePay() {
+  const location = useLocation()
+  const selectedVins = location.state?.vins || location.state?.selectedVins || []
   const { vehicles, escrows, createSafePayEscrow, updateEscrowStatus, initiatePaynowCheckoutSplit, simulatePaynowPayment, triggerPaynowWebhook } = useApp()
   const [activeSubTab, setActiveSubTab] = useState('ecocash') // ecocash, innbucks, zipit, diaspora
   
   // Transaction creation state
-  const [targetVin, setTargetVin] = useState(selectedVin || '')
+  const [targetVin, setTargetVin] = useState((selectedVins && selectedVins.length === 1) ? selectedVins[0] : '')
   const [buyerName, setBuyerName] = useState('Simba Choga (Diaspora)')
   const [currentEscrowId, setCurrentEscrowId] = useState(null)
   
@@ -34,27 +104,31 @@ export default function SafePay({ selectedVin }) {
   const [processingPayment, setProcessingPayment] = useState(false)
 
   React.useEffect(() => {
-    if (!targetVin && vehicles && vehicles.length > 0) {
-      setTargetVin(selectedVin || vehicles[0].vin)
+    if ((!selectedVins || selectedVins.length === 0) && !targetVin && vehicles && vehicles.length > 0) {
+      setTargetVin(vehicles[0].vin)
     }
-  }, [vehicles, targetVin, selectedVin])
+  }, [vehicles, targetVin, selectedVins])
 
-  const selectedVehicle = vehicles.find(v => v.vin === targetVin)
+  const isBulk = selectedVins && selectedVins.length > 1;
+  const activeVins = isBulk ? selectedVins : [targetVin];
+  
+  const selectedVehicles = vehicles.filter(v => activeVins.includes(v.vin));
+  const totalPrice = selectedVehicles.reduce((acc, v) => acc + v.price, 0);
   
   // 1. Initiate EcoCash Payment
   const triggerEcoCashPayment = (e) => {
     e.preventDefault()
-    if (!selectedVehicle) return
+    if (selectedVehicles.length === 0) return
     setShowUssdPrompt(true)
   }
 
   const confirmEcoCashPin = async () => {
-    if (ussdPin.length < 4 || !selectedVehicle) return
+    if (ussdPin.length < 4 || selectedVehicles.length === 0) return
     setProcessingPayment(true)
     try {
-      const id = await createSafePayEscrow(targetVin, selectedVehicle.price, `EcoCash Push (${ecocashNumber})`, buyerName)
+      const id = await createSafePayEscrow(activeVins.join(', '), totalPrice, `EcoCash Push (${ecocashNumber})`, buyerName)
       setCurrentEscrowId(id)
-      await simulatePaynowPayment(id, ecocashNumber, 'ecocash', selectedVehicle.price)
+      await simulatePaynowPayment(id, ecocashNumber, 'ecocash', totalPrice)
       setProcessingPayment(false)
       setShowUssdPrompt(false)
       setEcocashSuccess(true)
@@ -69,12 +143,12 @@ export default function SafePay({ selectedVin }) {
   // 2. Initiate InnBucks Payment
   const triggerInnBucksPayment = async (e) => {
     e.preventDefault()
-    if (!selectedVehicle) return
+    if (selectedVehicles.length === 0) return
     setProcessingPayment(true)
     try {
-      const id = await createSafePayEscrow(targetVin, selectedVehicle.price, `InnBucks Wallet (${innbucksPhone})`, buyerName)
+      const id = await createSafePayEscrow(activeVins.join(', '), totalPrice, `InnBucks Wallet (${innbucksPhone})`, buyerName)
       setCurrentEscrowId(id)
-      await simulatePaynowPayment(id, innbucksPhone, 'innbucks', selectedVehicle.price)
+      await simulatePaynowPayment(id, innbucksPhone, 'innbucks', totalPrice)
       setProcessingPayment(false)
       setInnbucksSuccess(true)
     } catch (err) {
@@ -85,10 +159,10 @@ export default function SafePay({ selectedVin }) {
 
   // 3. Initiate Zipit Payment
   const triggerZipitPayment = async () => {
-    if (!selectedVehicle) return
+    if (selectedVehicles.length === 0) return
     setProcessingPayment(true)
     try {
-      const id = await createSafePayEscrow(targetVin, selectedVehicle.price, `Zipit Instant (${selectedBank})`, buyerName)
+      const id = await createSafePayEscrow(activeVins.join(', '), totalPrice, `Zipit Instant (${selectedBank})`, buyerName)
       setCurrentEscrowId(id)
       setProcessingPayment(false)
       setZipitSuccess(true)
@@ -101,10 +175,10 @@ export default function SafePay({ selectedVin }) {
   // 4. Initiate Diaspora Payment & Splitting (Paynow Split)
   const triggerDiasporaPayment = async (e) => {
     e.preventDefault()
-    if (!selectedVehicle) return
+    if (selectedVehicles.length === 0) return
     setProcessingPayment(true)
     try {
-      const id = await initiatePaynowCheckoutSplit(targetVin, selectedVehicle.price, 0.85)
+      const id = await initiatePaynowCheckoutSplit(activeVins.join(', '), totalPrice, 0.85)
       setCurrentEscrowId(id)
       setProcessingPayment(false)
       setDiasporaSuccess(true)
@@ -127,7 +201,7 @@ export default function SafePay({ selectedVin }) {
 
       {/* Live USSD Push Simulation Status Bar Panel */}
       {pendingUssdEscrow && (
-        <div className="glass-card glow-gold" style={{
+        <GlassCard className="glow-gold" style={{
           background: 'linear-gradient(135deg, rgba(245, 158, 11, 0.08) 0%, rgba(17, 24, 43, 0.95) 100%)',
           border: '1px solid var(--gold-primary)',
           padding: '24px',
@@ -146,9 +220,9 @@ export default function SafePay({ selectedVin }) {
                 A simulated mobile money push transaction has been broadcasted via Paynow Zimbabwe. Awaiting subscriber USSD action.
               </p>
             </div>
-            <span className="logo-badge" style={{ background: 'var(--gold-glow-strong)', color: 'var(--gold-light)', borderColor: 'var(--gold-primary)' }}>
+            <Badge variant="mid">
               AWAITING HANDSET PIN
-            </span>
+            </Badge>
           </div>
 
           {/* Status bar */}
@@ -218,11 +292,11 @@ export default function SafePay({ selectedVin }) {
               </button>
             </div>
           </div>
-        </div>
+        </GlassCard>
       )}
 
       {/* Intro section */}
-      <div className="glass-card glow-gold" style={{
+      <GlassCard className="glow-gold" style={{
         background: 'linear-gradient(135deg, rgba(245, 158, 11, 0.05) 0%, rgba(17, 24, 43, 0.7) 100%)',
         border: '1px solid rgba(245, 158, 11, 0.15)',
         padding: '32px',
@@ -233,7 +307,7 @@ export default function SafePay({ selectedVin }) {
         gap: '24px'
       }}>
         <div style={{ maxWidth: '600px' }}>
-          <span className="logo-badge" style={{ background: 'var(--gold-glow-strong)', color: 'var(--gold-light)', borderColor: 'var(--gold-primary)', marginBottom: '8px' }}>Ecosystem Financial Engine</span>
+          <Badge variant="mid" style={{ marginBottom: '8px' }}>Ecosystem Financial Engine</Badge>
           <h2 style={{ fontSize: '26px', marginBottom: '8px' }}>CarUp SafePay™ Escrow</h2>
           <p style={{ color: 'var(--text-muted)', fontSize: '14px', lineHeight: '1.5' }}>
             SafePay eliminates vehicle purchase fraud in Zimbabwe by locking buyer funds in a secure escrow ledger. 
@@ -242,34 +316,40 @@ export default function SafePay({ selectedVin }) {
           </p>
         </div>
         <HeartHandshake size={64} style={{ color: 'var(--gold-primary)', opacity: 0.8 }} />
-      </div>
+      </GlassCard>
 
       <div className="grid-layout-split">
         
         {/* Payment execution center */}
-        <div className="glass-card" style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+        <GlassCard style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
           <h3 style={{ fontSize: '18px' }}>Escrow Payment Console</h3>
 
           {/* Target Vehicle Select */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
             <div className="form-group">
-              <label className="form-label">Car to Purchase</label>
-              <select 
-                className="form-input" 
-                style={{ background: '#070a13' }}
-                value={targetVin}
-                onChange={(e) => {
-                  setTargetVin(e.target.value)
-                  setEcocashSuccess(false)
-                  setInnbucksSuccess(false)
-                  setZipitSuccess(false)
-                  setDiasporaSuccess(false)
-                }}
-              >
-                {vehicles.map(v => (
-                  <option key={v.vin} value={v.vin}>{v.make} {v.model} (${v.price.toLocaleString()})</option>
-                ))}
-              </select>
+              <label className="form-label">{isBulk ? 'Bulk Order' : 'Car to Purchase'}</label>
+              {isBulk ? (
+                <div style={{ padding: '12px', background: 'rgba(255,255,255,0.05)', borderRadius: '8px', border: '1px solid var(--border-glass)', fontSize: '14px', color: 'var(--text-white)', fontWeight: 'bold' }}>
+                  {activeVins.length} Vehicles Reserved in Cart
+                </div>
+              ) : (
+                <select 
+                  className="form-input" 
+                  style={{ background: '#070a13' }}
+                  value={targetVin}
+                  onChange={(e) => {
+                    setTargetVin(e.target.value)
+                    setEcocashSuccess(false)
+                    setInnbucksSuccess(false)
+                    setZipitSuccess(false)
+                    setDiasporaSuccess(false)
+                  }}
+                >
+                  {vehicles.map(v => (
+                    <option key={v.vin} value={v.vin}>{v.make} {v.model} (${v.price.toLocaleString()})</option>
+                  ))}
+                </select>
+              )}
             </div>
 
             <div className="form-group">
@@ -283,10 +363,10 @@ export default function SafePay({ selectedVin }) {
             </div>
           </div>
 
-          {selectedVehicle && (
+          {selectedVehicles.length > 0 && (
             <div style={{ padding: '12px 16px', background: 'rgba(255,255,255,0.02)', borderRadius: '8px', border: '1px solid var(--border-glass)', display: 'flex', justifyContent: 'space-between', fontSize: '14px', marginBottom: '8px' }}>
-              <span>Total Price (USD):</span>
-              <strong style={{ color: 'var(--gold-light)' }}>${selectedVehicle.price.toLocaleString()}</strong>
+              <span>Total Ledger Amount (USD):</span>
+              <strong style={{ color: 'var(--gold-light)' }}>${totalPrice.toLocaleString()}</strong>
             </div>
           )}
 
@@ -412,15 +492,15 @@ export default function SafePay({ selectedVin }) {
                   <span style={{ display: 'block', marginBottom: '6px' }}>
                     This portal automatically routes 15% custom duty payments directly into the ZIMRA Custom Account, and locks 85% in Secure Purchase Escrow. Real-time border clearance.
                   </span>
-                  {selectedVehicle && (
+                  {selectedVehicles.length > 0 && (
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', background: 'rgba(0,0,0,0.2)', padding: '8px', borderRadius: '4px', marginTop: '6px', fontSize: '11px' }}>
                       <div>
                         <span style={{ color: 'var(--text-muted)' }}>ZIMRA Split (15%):</span>
-                        <p style={{ fontWeight: 'bold', color: '#fff' }}>USD ${(selectedVehicle.price * 0.15).toLocaleString()}</p>
+                        <p style={{ fontWeight: 'bold', color: '#fff' }}>USD ${(totalPrice * 0.15).toLocaleString()}</p>
                       </div>
                       <div>
                         <span style={{ color: 'var(--text-muted)' }}>Escrow Split (85%):</span>
-                        <p style={{ fontWeight: 'bold', color: 'var(--emerald-light)' }}>USD ${(selectedVehicle.price * 0.85).toLocaleString()}</p>
+                        <p style={{ fontWeight: 'bold', color: 'var(--emerald-light)' }}>USD ${(totalPrice * 0.85).toLocaleString()}</p>
                       </div>
                     </div>
                   )}
@@ -471,11 +551,11 @@ export default function SafePay({ selectedVin }) {
           {/* EcoCash PIN USSD Modal Overlay */}
           {showUssdPrompt && (
             <div className="modal-overlay">
-              <div className="modal-content glass-card glow-gold" style={{ background: '#1c1917', border: '2px solid var(--gold-primary)', maxWidth: '320px', width: '100%', padding: '24px', textAlign: 'center' }}>
+              <GlassCard className="modal-content glow-gold" style={{ background: '#1c1917', border: '2px solid var(--gold-primary)', maxWidth: '320px', width: '100%', padding: '24px', textAlign: 'center' }}>
                 <Smartphone size={32} style={{ color: 'var(--gold-primary)', margin: '0 auto 12px auto' }} />
                 <h4 style={{ color: '#fff', fontSize: '16px', marginBottom: '8px' }}>EcoCash USSD Push Prompt</h4>
                 <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '16px' }}>
-                  Enter EcoCash PIN on your handset to approve <strong>${selectedVehicle?.price.toLocaleString()} USD</strong> payment to CarUp Escrow.
+                  Enter EcoCash PIN on your handset to approve <strong>${totalPrice.toLocaleString()} USD</strong> payment to CarUp Escrow.
                 </p>
                 <input 
                   type="password" 
@@ -490,7 +570,7 @@ export default function SafePay({ selectedVin }) {
                   <button className="btn-secondary" style={{ flex: 1, padding: '8px' }} onClick={() => setShowUssdPrompt(false)}>Cancel</button>
                   <button className="btn-gold" style={{ flex: 1, padding: '8px' }} onClick={confirmEcoCashPin} disabled={ussdPin.length < 4}>Verify PIN</button>
                 </div>
-              </div>
+              </GlassCard>
             </div>
           )}
 
@@ -505,10 +585,10 @@ export default function SafePay({ selectedVin }) {
             </div>
           )}
 
-        </div>
+        </GlassCard>
 
         {/* Active Escrow Ledger tracking */}
-        <div className="glass-card" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+        <GlassCard style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
           <h3 style={{ fontSize: '18px' }}>Active Escrow Ledger</h3>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
@@ -527,23 +607,17 @@ export default function SafePay({ selectedVin }) {
                     <h4 style={{ fontSize: '15px' }}>{escrow.vehicleName}</h4>
                     <span style={{ fontSize: '11px', color: 'var(--text-muted)', display: 'block' }}>ID: {escrow.id} | Buyer: {escrow.buyer}</span>
                   </div>
-                  <span style={{
-                    fontSize: '11px',
-                    fontWeight: 800,
-                    padding: '3px 8px',
-                    borderRadius: '4px',
-                    background: escrow.status === 'Settled to Seller' ? 'var(--emerald-glow)' : 'var(--gold-glow)',
-                    color: escrow.status === 'Settled to Seller' ? 'var(--emerald-light)' : 'var(--gold-light)',
-                    border: `1px solid ${escrow.status === 'Settled to Seller' ? 'var(--emerald-primary)' : 'var(--gold-primary)'}`
-                  }}>
+                  <Badge variant={escrow.status === 'Settled to Seller' ? 'high' : 'mid'}>
                     {escrow.status}
-                  </span>
+                  </Badge>
                 </div>
 
                 <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px solid rgba(255,255,255,0.03)', paddingTop: '8px', fontSize: '13px' }}>
                   <span>Escrow Holder:</span>
                   <strong>${escrow.amount.toLocaleString()} USD</strong>
                 </div>
+
+                <EscrowTimeline status={escrow.status} />
 
                 {escrow.status !== 'Settled to Seller' && (
                   <button 
@@ -562,7 +636,7 @@ export default function SafePay({ selectedVin }) {
             <AlertCircle size={16} style={{ flexShrink: 0, color: 'var(--gold-primary)' }} />
             <span>Escrow compliance checks ZIMRA registration profiles and chassis IDs before enabling the "Release Funds" mechanic. Safety protocols conform to CVR standards.</span>
           </div>
-        </div>
+        </GlassCard>
 
       </div>
 

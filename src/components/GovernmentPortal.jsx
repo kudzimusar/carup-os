@@ -1,6 +1,8 @@
 import React, { useState } from 'react'
 import { useApp } from '../context/AppContext'
-import { Landmark, ShieldAlert, CheckCircle, FileText, XCircle, ToggleLeft, ToggleRight, Scale, ShieldCheck, RefreshCw, TrendingUp, DollarSign, Award } from 'lucide-react'
+import { Landmark, ShieldAlert, CheckCircle, FileText, XCircle, ToggleLeft, ToggleRight, Scale, ShieldCheck, RefreshCw, TrendingUp, DollarSign, Award, BarChart2, Activity, Globe } from 'lucide-react'
+import GlassCard from './ui/GlassCard'
+import Badge from './ui/Badge'
 
 export default function GovernmentPortal() {
   const { vehicles, verifyDocumentDirectly, toggleVehicleStolen, adminMetrics } = useApp()
@@ -56,18 +58,15 @@ export default function GovernmentPortal() {
     <div className="animate-fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
       
       {/* Live System Telemetry Metrics */}
-      <div className="glass-card" style={{ 
+      <GlassCard className="neon-sweep-border active-neon-sweep" style={{ 
         display: 'grid', 
         gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', 
-        gap: '20px', 
-        border: '1px solid rgba(239, 68, 68, 0.25)', 
-        boxShadow: '0 0 20px rgba(239, 68, 68, 0.05)',
-        padding: '20px'
+        gap: '20px'
       }}>
         {/* Active sequential Block Heights */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-          <span className="text-muted" style={{ fontSize: '12px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <TrendingUp size={14} style={{ color: '#fca5a5' }} /> Blockchain Block Height
+          <span className="text-muted" style={{ fontSize: '12px', display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 600 }}>
+            <TrendingUp size={14} style={{ color: 'var(--theme-text-accent)' }} /> Blockchain Block Height
           </span>
           <h4 style={{ fontSize: '24px', color: '#fff', fontWeight: 800 }}>
             #{adminMetrics?.blockchainBlocks || 0}
@@ -79,8 +78,8 @@ export default function GovernmentPortal() {
 
         {/* SafePay Escrow transaction volumes */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-          <span className="text-muted" style={{ fontSize: '12px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <DollarSign size={14} style={{ color: '#fca5a5' }} /> SafePay Escrow Volume
+          <span className="text-muted" style={{ fontSize: '12px', display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 600 }}>
+            <DollarSign size={14} style={{ color: 'var(--theme-text-accent)' }} /> SafePay Escrow Volume
           </span>
           <h4 style={{ fontSize: '24px', color: '#fff', fontWeight: 800 }}>
             {adminMetrics?.escrows || 0} Tx
@@ -92,8 +91,8 @@ export default function GovernmentPortal() {
 
         {/* Split commissions pools */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-          <span className="text-muted" style={{ fontSize: '12px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <Award size={14} style={{ color: '#fca5a5' }} /> Split Commissions Pool
+          <span className="text-muted" style={{ fontSize: '12px', display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 600 }}>
+            <Award size={14} style={{ color: 'var(--theme-text-accent)' }} /> Split Commissions Pool
           </span>
           <h4 style={{ fontSize: '24px', color: 'var(--gold-light)', fontWeight: 800 }}>
             USD ${(adminMetrics?.totalCommissions || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
@@ -105,8 +104,8 @@ export default function GovernmentPortal() {
 
         {/* ZIMRA custom splitter yields */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-          <span className="text-muted" style={{ fontSize: '12px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <Landmark size={14} style={{ color: '#fca5a5' }} /> ZIMRA Splitter Yields
+          <span className="text-muted" style={{ fontSize: '12px', display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 600 }}>
+            <Landmark size={14} style={{ color: 'var(--theme-text-accent)' }} /> ZIMRA Splitter Yields
           </span>
           <h4 style={{ fontSize: '24px', color: '#fff', fontWeight: 800 }}>
             USD ${zimraYield.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
@@ -115,14 +114,14 @@ export default function GovernmentPortal() {
             Custom import split yields
           </span>
         </div>
-      </div>
+      </GlassCard>
 
       <div className="grid-2" style={{ gap: '32px' }}>
         
         {/* CVR Registry Document Deed Signer */}
-        <div className="glass-card" style={{ display: 'flex', flexDirection: 'column', gap: '24px', border: '1px solid rgba(239, 68, 68, 0.25)', boxShadow: '0 0 20px rgba(239, 68, 68, 0.05)' }}>
+        <GlassCard style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
           <div>
-            <h3 style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#fca5a5' }}>
+            <h3 style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--theme-text-accent)' }}>
               <Landmark size={22} /> CVR Registry Deed Signer
             </h3>
             <p className="text-muted" style={{ fontSize: '13px', marginTop: '4px' }}>
@@ -130,8 +129,8 @@ export default function GovernmentPortal() {
             </p>
           </div>
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-            <label style={{ fontSize: '14px', fontWeight: 600 }}>Select In-Review Passport:</label>
+          <div className="form-group" style={{ marginBottom: 0 }}>
+            <label className="form-label">Select In-Review Passport:</label>
             <select 
               value={selectedVin} 
               onChange={(e) => setSelectedVin(e.target.value)}
@@ -148,7 +147,7 @@ export default function GovernmentPortal() {
 
           {/* Dynamic Verification Signer Grid */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-            <span className="text-muted" style={{ fontSize: '13px' }}>Verify Registry Documents:</span>
+            <span className="text-muted" style={{ fontSize: '13px', fontWeight: 600 }}>Verify Registry Documents:</span>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
               {docs.map(doc => {
                 const status = activeVehicle.documents[doc.key]
@@ -159,24 +158,26 @@ export default function GovernmentPortal() {
                       <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>Status: {status.toUpperCase()}</p>
                     </div>
                     {status === 'verified' ? (
-                      <span style={{ fontSize: '12px', color: 'var(--emerald-light)', display: 'flex', alignItems: 'center', gap: '4px', fontWeight: 600 }}>
-                        <CheckCircle size={14} /> Signed
-                      </span>
+                      <Badge variant="high">
+                        <CheckCircle size={12} /> Signed
+                      </Badge>
                     ) : (
                       <button 
                         disabled={loading}
                         onClick={() => handleVerifyDoc(doc.key)}
                         style={{
                           padding: '6px 12px',
-                          background: 'rgba(239, 68, 68, 0.15)',
-                          color: '#fca5a5',
-                          border: '1px solid rgba(239, 68, 68, 0.3)',
+                          background: 'var(--theme-glow)',
+                          color: 'var(--theme-text-accent)',
+                          border: '1px solid var(--theme-border)',
                           borderRadius: '6px',
                           fontSize: '11px',
                           cursor: 'pointer',
                           fontWeight: 600,
                           transition: 'var(--transition-smooth)'
                         }}
+                        onMouseOver={(e) => { e.target.style.background = 'var(--theme-glow-strong)' }}
+                        onMouseOut={(e) => { e.target.style.background = 'var(--theme-glow)' }}
                       >
                         Verify / Sign
                       </button>
@@ -186,15 +187,15 @@ export default function GovernmentPortal() {
               })}
             </div>
           </div>
-        </div>
+        </GlassCard>
 
         {/* Police Recovery & Customs splitting */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
           
           {/* ZRP Police Stolen recovery desk */}
-          <div className="glass-card" style={{ display: 'flex', flexDirection: 'column', gap: '20px', border: '1px solid rgba(239, 68, 68, 0.25)', boxShadow: '0 0 20px rgba(239, 68, 68, 0.05)' }}>
+          <GlassCard style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
             <div>
-              <h3 style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#fca5a5' }}>
+              <h3 style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--theme-text-accent)' }}>
                 <ShieldAlert size={22} /> ZRP Anti-Theft Command
               </h3>
               <p className="text-muted" style={{ fontSize: '13px', marginTop: '4px' }}>
@@ -204,10 +205,14 @@ export default function GovernmentPortal() {
 
             <div style={{ padding: '16px', borderRadius: '12px', background: activeVehicle.stolen ? 'rgba(239, 68, 68, 0.1)' : 'rgba(16, 185, 129, 0.05)', border: activeVehicle.stolen ? '1px solid rgba(239, 68, 68, 0.3)' : '1px solid rgba(16, 185, 129, 0.2)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <div>
-                <span className="text-muted" style={{ fontSize: '12px' }}>Active Security Status</span>
-                <h4 style={{ color: activeVehicle.stolen ? 'var(--red-primary)' : 'var(--emerald-light)', marginTop: '4px' }}>
-                  {activeVehicle.stolen ? 'FLAGGED AS STOLEN' : 'SECURE / CLEAR'}
-                </h4>
+                <span className="text-muted" style={{ fontSize: '12px', fontWeight: 600 }}>Active Security Status</span>
+                <div style={{ marginTop: '6px' }}>
+                  {activeVehicle.stolen ? (
+                    <Badge variant="alert">FLAGGED AS STOLEN</Badge>
+                  ) : (
+                    <Badge variant="high">SECURE / CLEAR</Badge>
+                  )}
+                </div>
               </div>
 
               <button 
@@ -238,12 +243,12 @@ export default function GovernmentPortal() {
                 )}
               </button>
             </div>
-          </div>
+          </GlassCard>
 
           {/* ZIMRA Custom Duties split admin */}
-          <div className="glass-card" style={{ display: 'flex', flexDirection: 'column', gap: '20px', border: '1px solid rgba(239, 68, 68, 0.25)', boxShadow: '0 0 20px rgba(239, 68, 68, 0.05)' }}>
+          <GlassCard style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
             <div>
-              <h3 style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#fca5a5' }}>
+              <h3 style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--theme-text-accent)' }}>
                 <Scale size={22} /> ZIMRA Import Tariff Splitter
               </h3>
               <p className="text-muted" style={{ fontSize: '13px', marginTop: '4px' }}>
@@ -253,8 +258,8 @@ export default function GovernmentPortal() {
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
               <label style={{ fontSize: '13px', fontWeight: 600, display: 'flex', justifyContent: 'space-between' }}>
-                <span>Import Tariff Rate:</span>
-                <span style={{ color: '#fca5a5' }}>{tariffRate}%</span>
+                <span className="form-label">Import Tariff Rate:</span>
+                <span style={{ color: 'var(--theme-text-accent)' }}>{tariffRate}%</span>
               </label>
               <input 
                 type="range" 
@@ -263,35 +268,136 @@ export default function GovernmentPortal() {
                 step="5"
                 value={tariffRate}
                 onChange={(e) => setTariffRate(parseInt(e.target.value))}
-                style={{ width: '100%', cursor: 'pointer', accentColor: 'var(--red-primary)' }}
+                style={{ width: '100%', cursor: 'pointer', accentColor: 'var(--theme-accent)' }}
               />
             </div>
 
             <div style={{ background: 'rgba(255, 255, 255, 0.02)', padding: '16px', borderRadius: '12px', border: '1px solid var(--border-glass)', display: 'flex', flexDirection: 'column', gap: '10px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
-                <span className="text-muted">Vehicle Base Value:</span>
+                <span className="text-muted font-semibold">Vehicle Base Value:</span>
                 <span style={{ fontWeight: 600 }}>USD ${activeVehicle.price.toLocaleString()}</span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: '10px' }}>
-                <span className="text-muted">Total Customs Duty:</span>
-                <span style={{ fontWeight: 600, color: 'var(--red-primary)' }}>USD ${dutyPayable.toLocaleString()}</span>
+                <span className="text-muted font-semibold">Total Customs Duty:</span>
+                <span style={{ fontWeight: 600, color: 'var(--theme-text-accent)' }}>USD ${dutyPayable.toLocaleString()}</span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px' }}>
                 <span className="text-muted">ZIMRA Treasury Split (50%):</span>
-                <span style={{ color: '#fca5a5' }}>USD ${treasurySplit.toLocaleString()}</span>
+                <span style={{ color: 'var(--theme-text-accent)' }}>USD ${treasurySplit.toLocaleString()}</span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px' }}>
                 <span className="text-muted">Excise Custom Reserve (35%):</span>
-                <span style={{ color: '#fca5a5' }}>USD ${exciseShare.toLocaleString()}</span>
+                <span style={{ color: 'var(--theme-text-accent)' }}>USD ${exciseShare.toLocaleString()}</span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px' }}>
                 <span className="text-muted">National Infrastructure Deed (15%):</span>
-                <span style={{ color: '#fca5a5' }}>USD ${infrastructureSplit.toLocaleString()}</span>
+                <span style={{ color: 'var(--theme-text-accent)' }}>USD ${infrastructureSplit.toLocaleString()}</span>
+              </div>
+            </div>
+          </GlassCard>
+        </div>
+      </div>
+
+      {/* ZIMRA Tax/Import Analytics Dashboard */}
+      <GlassCard className="border-accent" style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '16px' }}>
+          <div>
+            <h3 style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--theme-text-accent)' }}>
+              <BarChart2 size={22} /> ZIMRA Tax & Import Analytics Terminal
+            </h3>
+            <p className="text-muted" style={{ fontSize: '13px', marginTop: '4px' }}>
+              Real-time predictive telemetry for border clearance, duty yields, and macro-economic tax structuring.
+            </p>
+          </div>
+          <div style={{ display: 'flex', gap: '12px' }}>
+             <Badge variant="high">LIVE SYNC</Badge>
+             <Badge variant="low">Q3 FISCAL</Badge>
+          </div>
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '24px' }}>
+          {/* Revenue Trajectory */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-muted)' }}>Projected Q3 Duty Revenue</span>
+              <span style={{ fontSize: '12px', color: 'var(--emerald-light)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                <TrendingUp size={12} /> +14.2% YoY
+              </span>
+            </div>
+            <div style={{ fontSize: '28px', fontWeight: 800, color: '#fff', fontFamily: 'monospace' }}>
+              USD $42.8M
+            </div>
+            
+            {/* Mock Chart */}
+            <div style={{ display: 'flex', alignItems: 'flex-end', height: '60px', gap: '4px', marginTop: '8px' }}>
+              {[30, 45, 25, 60, 40, 75, 50, 85, 65, 95, 80, 100].map((h, i) => (
+                <div key={i} style={{
+                  flex: 1,
+                  height: `${h}%`,
+                  background: h > 80 ? 'var(--theme-text-accent)' : 'rgba(255, 255, 255, 0.1)',
+                  borderRadius: '2px 2px 0 0',
+                  transition: 'height 0.3s ease'
+                }} />
+              ))}
+            </div>
+          </div>
+
+          {/* Port Clearance Rates */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-muted)' }}>Border Port Clearances (24H)</span>
+              <Activity size={14} style={{ color: 'var(--gold-light)' }} />
+            </div>
+            
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '8px' }}>
+               {[
+                 { port: 'Beitbridge', val: 84, color: 'var(--emerald-primary)' },
+                 { port: 'Chirundu', val: 62, color: 'var(--theme-text-accent)' },
+                 { port: 'Plumtree', val: 45, color: 'var(--gold-light)' },
+                 { port: 'Forbes', val: 28, color: 'var(--red-primary)' }
+               ].map(p => (
+                 <div key={p.port} style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                   <span style={{ fontSize: '11px', width: '70px', color: 'var(--text-muted)' }}>{p.port}</span>
+                   <div style={{ flex: 1, height: '6px', background: 'rgba(255,255,255,0.05)', borderRadius: '3px', overflow: 'hidden' }}>
+                     <div style={{ height: '100%', width: `${p.val}%`, background: p.color }} />
+                   </div>
+                   <span style={{ fontSize: '11px', width: '30px', textAlign: 'right', fontFamily: 'monospace' }}>{p.val}%</span>
+                 </div>
+               ))}
+            </div>
+          </div>
+
+          {/* Vehicle Import Categories */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-muted)' }}>Import Categories (By Volume)</span>
+              <Globe size={14} style={{ color: 'var(--theme-text-accent)' }} />
+            </div>
+
+            <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flex: 1 }}>
+              <div style={{ position: 'relative', width: '80px', height: '80px', borderRadius: '50%', background: 'conic-gradient(var(--theme-text-accent) 0% 45%, var(--emerald-primary) 45% 75%, var(--gold-light) 75% 90%, rgba(255,255,255,0.1) 90% 100%)' }}>
+                 <div style={{ position: 'absolute', inset: '8px', background: '#0a0a0a', borderRadius: '50%' }} />
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', flex: 1 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px' }}>
+                  <span style={{ color: 'var(--theme-text-accent)' }}>● Commercial</span> <span>45%</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px' }}>
+                  <span style={{ color: 'var(--emerald-primary)' }}>● Passenger</span> <span>30%</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px' }}>
+                  <span style={{ color: 'var(--gold-light)' }}>● Agricultural</span> <span>15%</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px' }}>
+                  <span style={{ color: 'var(--text-muted)' }}>● Special/Other</span> <span>10%</span>
+                </div>
               </div>
             </div>
           </div>
+
         </div>
-      </div>
+      </GlassCard>
+
     </div>
   )
 }

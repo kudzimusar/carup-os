@@ -1,15 +1,21 @@
 import React, { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useApp } from '../context/AppContext'
-import { Shield, MapPin, Gauge, Fuel, CheckCircle, AlertTriangle, X, DollarSign, ExternalLink, ShieldAlert, ShieldCheck, MessageSquare } from 'lucide-react'
+import { Shield, MapPin, Gauge, Fuel, CheckCircle, AlertTriangle, X, DollarSign, ExternalLink, ShieldAlert, ShieldCheck, MessageSquare, ShoppingCart, Trash2 } from 'lucide-react'
+import { ReservationLedger } from './ui/ReservationLedger'
 
-export default function Marketplace({ setActiveTab, setSelectedVinForSafePay }) {
-  const { vehicles } = useApp()
+export default function Marketplace() {
+  const navigate = useNavigate()
+  const { vehicles, cartItems, globalLocks, addToCart, removeFromCart, clearCart } = useApp()
   const [searchTerm, setSearchTerm] = useState('')
   const [minTrust, setMinTrust] = useState(0)
   const [selectedVehicle, setSelectedVehicle] = useState(null)
   const [animatedTrust, setAnimatedTrust] = useState(0)
   const [comparedVins, setComparedVins] = useState([])
   const [showComparisonModal, setShowComparisonModal] = useState(false)
+  const [showCartModal, setShowCartModal] = useState(false)
+
+
 
   const handleToggleCompare = (vin) => {
     setComparedVins(prev => {
@@ -147,7 +153,7 @@ export default function Marketplace({ setActiveTab, setSelectedVinForSafePay }) 
           />
         </div>
         
-        <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
+        <div style={{ display: 'flex', gap: '16px', alignItems: 'center', flexWrap: 'wrap' }}>
           <span className="form-label" style={{ margin: 0 }}>Min Trust Index:</span>
           <div style={{ display: 'flex', gap: '8px' }}>
             {[0, 50, 80].map(val => (
@@ -167,6 +173,47 @@ export default function Marketplace({ setActiveTab, setSelectedVinForSafePay }) 
               </button>
             ))}
           </div>
+
+          <div style={{ width: '1px', height: '24px', background: 'var(--border-glass)' }}></div>
+
+          <button 
+            className={`btn-gold ${cartItems.length > 0 ? 'glow-gold' : ''}`}
+            style={{
+              padding: '6px 16px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              fontSize: '14px',
+              position: 'relative',
+              background: cartItems.length > 0 ? 'var(--gold-primary)' : 'transparent',
+              color: cartItems.length > 0 ? '#000' : 'var(--gold-light)',
+              borderColor: 'var(--gold-primary)'
+            }}
+            onClick={() => setShowCartModal(true)}
+          >
+            <ShoppingCart size={16} />
+            Reserve Cart
+            {cartItems.length > 0 && (
+              <span style={{
+                position: 'absolute',
+                top: '-8px',
+                right: '-8px',
+                background: '#ef4444',
+                color: '#fff',
+                fontSize: '11px',
+                fontWeight: 'bold',
+                width: '20px',
+                height: '20px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                borderRadius: '50%',
+                boxShadow: '0 0 10px rgba(239, 68, 68, 0.5)'
+              }}>
+                {cartItems.length}
+              </span>
+            )}
+          </button>
         </div>
       </div>
 
@@ -211,7 +258,7 @@ export default function Marketplace({ setActiveTab, setSelectedVinForSafePay }) 
                 <span style={{ fontSize: '11px', color: 'var(--text-muted)', display: 'block' }}>USD PRICE</span>
                 <span style={{ fontSize: '20px', fontWeight: 800, color: 'var(--text-white)' }}>${vehicle.price.toLocaleString()}</span>
               </div>
-              <div style={{ display: 'flex', gap: '8px' }}>
+              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
                 <button 
                   className={`btn-secondary ${comparedVins.includes(vehicle.vin) ? 'glow-emerald' : ''}`}
                   style={{
@@ -231,8 +278,33 @@ export default function Marketplace({ setActiveTab, setSelectedVinForSafePay }) 
                 >
                   {comparedVins.includes(vehicle.vin) ? 'Compared' : 'Compare'}
                 </button>
-                <button className="btn-primary" style={{ padding: '8px 14px', fontSize: '13px' }}>
-                  Passport
+                <button 
+                  className={`btn-secondary ${cartItems.includes(vehicle.vin) ? 'glow-gold' : ''}`}
+                  disabled={globalLocks.some(l => l.vin === vehicle.vin)}
+                  style={{
+                    padding: '8px 12px',
+                    fontSize: '12px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    borderColor: cartItems.includes(vehicle.vin) ? 'var(--gold-primary)' : 'var(--border-glass)',
+                    background: cartItems.includes(vehicle.vin) ? 'var(--gold-glow)' : 'transparent',
+                    color: cartItems.includes(vehicle.vin) ? 'var(--gold-light)' : (globalLocks.some(l => l.vin === vehicle.vin) ? '#ef4444' : 'var(--text-muted)'),
+                    opacity: globalLocks.some(l => l.vin === vehicle.vin) ? 0.5 : 1,
+                    cursor: globalLocks.some(l => l.vin === vehicle.vin) ? 'not-allowed' : 'pointer'
+                  }}
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    if (globalLocks.some(l => l.vin === vehicle.vin)) return;
+                    if (cartItems.includes(vehicle.vin)) {
+                      removeFromCart(vehicle.vin)
+                    } else {
+                      addToCart(vehicle.vin)
+                    }
+                  }}
+                >
+                  {globalLocks.some(l => l.vin === vehicle.vin) ? <ShieldAlert size={14} /> : <ShoppingCart size={14} />}
+                  {globalLocks.some(l => l.vin === vehicle.vin) ? 'Locked' : (cartItems.includes(vehicle.vin) ? 'Reserved' : 'Reserve')}
                 </button>
               </div>
             </div>
@@ -482,19 +554,42 @@ export default function Marketplace({ setActiveTab, setSelectedVinForSafePay }) 
                   </div>
                 </div>
                 
-                {/* SafePay Button */}
-                <div style={{ marginTop: '24px' }}>
+                {/* SafePay & Cart Buttons */}
+                <div style={{ marginTop: '24px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
                   <button 
                     className="btn-gold glow-gold" 
                     style={{ width: '100%', padding: '14px', gap: '8px' }}
                     onClick={() => {
-                      setSelectedVinForSafePay(selectedVehicle.vin)
                       setSelectedVehicle(null)
-                      setActiveTab('safepay')
+                      navigate('/safepay', { state: { selectedVins: [selectedVehicle.vin] } })
                     }}
                   >
                     <DollarSign size={18} />
                     Secure Purchase via SafePay Escrow
+                  </button>
+                  <button 
+                    className="btn-secondary" 
+                    disabled={globalLocks.some(l => l.vin === selectedVehicle.vin)}
+                    style={{ 
+                      width: '100%', 
+                      padding: '14px', 
+                      gap: '8px',
+                      borderColor: cartItems.includes(selectedVehicle.vin) ? 'var(--gold-primary)' : 'var(--border-glass)',
+                      color: cartItems.includes(selectedVehicle.vin) ? 'var(--gold-light)' : (globalLocks.some(l => l.vin === selectedVehicle.vin) ? '#ef4444' : 'var(--text-muted)'),
+                      opacity: globalLocks.some(l => l.vin === selectedVehicle.vin) ? 0.5 : 1,
+                      cursor: globalLocks.some(l => l.vin === selectedVehicle.vin) ? 'not-allowed' : 'pointer'
+                    }}
+                    onClick={() => {
+                      if (globalLocks.some(l => l.vin === selectedVehicle.vin)) return;
+                      if (cartItems.includes(selectedVehicle.vin)) {
+                        removeFromCart(selectedVehicle.vin)
+                      } else {
+                        addToCart(selectedVehicle.vin)
+                      }
+                    }}
+                  >
+                    {globalLocks.some(l => l.vin === selectedVehicle.vin) ? <ShieldAlert size={18} /> : <ShoppingCart size={18} />}
+                    {globalLocks.some(l => l.vin === selectedVehicle.vin) ? 'Globally Locked by Another Buyer' : (cartItems.includes(selectedVehicle.vin) ? 'Remove from Cart / Reserve Ledger' : 'Add to Cart / Reserve Ledger')}
                   </button>
                   <a 
                     href={`https://wa.me/263771234567?text=Mhoroi!%20I%20am%20interested%20in%20your%20verified%20${selectedVehicle.year}%20${selectedVehicle.make}%20${selectedVehicle.model}%20listed%20on%20CarUp%20Automotive%20OS.%20Trust%20Score:%20${selectedVehicle.trustIndex}%.%20VIN:%20${selectedVehicle.vin}.`}
@@ -851,6 +946,17 @@ export default function Marketplace({ setActiveTab, setSelectedVinForSafePay }) 
           </div>
         </div>
       )}
+
+      {/* Cart / Reservation Ledger Modal Overlay */}
+      <ReservationLedger 
+        isOpen={showCartModal} 
+        onClose={() => setShowCartModal(false)} 
+        onCheckout={() => {
+          setSelectedVinsForSafePay(cartItems);
+          setShowCartModal(false);
+          setActiveTab('safepay');
+        }}
+      />
 
     </div>
   )

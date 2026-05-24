@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import { useApp } from '../context/AppContext'
-import { Wrench, Shield, ShieldCheck, ShieldAlert, Cpu, Layers, RefreshCw, Send, CheckCircle } from 'lucide-react'
+import { Wrench, Shield, ShieldCheck, ShieldAlert, Cpu, Layers, RefreshCw, Send, CheckCircle, Eye, MousePointerClick, CalendarCheck, TrendingUp } from 'lucide-react'
 
 export default function GaragePortal() {
   const { vehicles, triggerPartSentryChange } = useApp()
@@ -35,8 +35,65 @@ export default function GaragePortal() {
   }
 
   return (
-    <div className="grid-2 animate-fade-in" style={{ gap: '32px' }}>
+    <div className="animate-fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
       
+      {/* Dealership Analytics Dashboard */}
+      <div className="glass-card" style={{ padding: '24px' }}>
+        <div style={{ marginBottom: '20px' }}>
+          <h3 style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--cyan-light)' }}>
+            <TrendingUp size={22} /> Clinic Performance Metrics
+          </h3>
+          <p className="text-muted" style={{ fontSize: '13px', marginTop: '4px' }}>
+            Real-time telemetry for clinic profile views, engagement clicks, and service reservations.
+          </p>
+        </div>
+
+        <div className="grid-3" style={{ gap: '16px' }}>
+          {/* Views */}
+          <div style={{ background: 'rgba(255, 255, 255, 0.02)', border: '1px solid var(--border-glass)', borderRadius: '12px', padding: '20px', display: 'flex', alignItems: 'center', gap: '16px', transition: 'var(--transition-smooth)', cursor: 'default' }} onMouseOver={(e) => { e.currentTarget.style.background = 'rgba(255, 255, 255, 0.04)'; e.currentTarget.style.borderColor = 'var(--cyan-primary)'; }} onMouseOut={(e) => { e.currentTarget.style.background = 'rgba(255, 255, 255, 0.02)'; e.currentTarget.style.borderColor = 'var(--border-glass)'; }}>
+            <div style={{ width: '48px', height: '48px', borderRadius: '12px', background: 'rgba(6, 182, 212, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--cyan-light)', boxShadow: '0 0 15px rgba(6, 182, 212, 0.2)' }}>
+              <Eye size={24} />
+            </div>
+            <div>
+              <p className="text-muted" style={{ fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 600 }}>Profile Views</p>
+              <h2 style={{ fontSize: '28px', color: 'var(--text-white)', margin: '4px 0 0 0', lineHeight: 1 }}>12,482</h2>
+              <p style={{ fontSize: '12px', color: 'var(--emerald-light)', marginTop: '4px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                <TrendingUp size={12} /> +14.2% this week
+              </p>
+            </div>
+          </div>
+
+          {/* Clicks */}
+          <div style={{ background: 'rgba(255, 255, 255, 0.02)', border: '1px solid var(--border-glass)', borderRadius: '12px', padding: '20px', display: 'flex', alignItems: 'center', gap: '16px', transition: 'var(--transition-smooth)', cursor: 'default' }} onMouseOver={(e) => { e.currentTarget.style.background = 'rgba(255, 255, 255, 0.04)'; e.currentTarget.style.borderColor = 'var(--blue-primary)'; }} onMouseOut={(e) => { e.currentTarget.style.background = 'rgba(255, 255, 255, 0.02)'; e.currentTarget.style.borderColor = 'var(--border-glass)'; }}>
+            <div style={{ width: '48px', height: '48px', borderRadius: '12px', background: 'rgba(37, 99, 235, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--blue-light)', boxShadow: '0 0 15px rgba(37, 99, 235, 0.2)' }}>
+              <MousePointerClick size={24} />
+            </div>
+            <div>
+              <p className="text-muted" style={{ fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 600 }}>Engagement Clicks</p>
+              <h2 style={{ fontSize: '28px', color: 'var(--text-white)', margin: '4px 0 0 0', lineHeight: 1 }}>3,841</h2>
+              <p style={{ fontSize: '12px', color: 'var(--emerald-light)', marginTop: '4px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                <TrendingUp size={12} /> +8.7% this week
+              </p>
+            </div>
+          </div>
+
+          {/* Reservations */}
+          <div style={{ background: 'rgba(255, 255, 255, 0.02)', border: '1px solid var(--border-glass)', borderRadius: '12px', padding: '20px', display: 'flex', alignItems: 'center', gap: '16px', transition: 'var(--transition-smooth)', cursor: 'default' }} onMouseOver={(e) => { e.currentTarget.style.background = 'rgba(255, 255, 255, 0.04)'; e.currentTarget.style.borderColor = 'var(--gold-primary)'; }} onMouseOut={(e) => { e.currentTarget.style.background = 'rgba(255, 255, 255, 0.02)'; e.currentTarget.style.borderColor = 'var(--border-glass)'; }}>
+            <div style={{ width: '48px', height: '48px', borderRadius: '12px', background: 'rgba(245, 158, 11, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--gold-light)', boxShadow: '0 0 15px rgba(245, 158, 11, 0.2)' }}>
+              <CalendarCheck size={24} />
+            </div>
+            <div>
+              <p className="text-muted" style={{ fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 600 }}>Service Reservations</p>
+              <h2 style={{ fontSize: '28px', color: 'var(--text-white)', margin: '4px 0 0 0', lineHeight: 1 }}>142</h2>
+              <p style={{ fontSize: '12px', color: 'var(--emerald-light)', marginTop: '4px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                <TrendingUp size={12} /> +24.0% this week
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="grid-2" style={{ gap: '32px' }}>
       {/* Diagnostics and Parts Ledger */}
       <div className="glass-card" style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -219,6 +276,8 @@ export default function GaragePortal() {
             )}
           </button>
         </form>
+      </div>
+
       </div>
 
     </div>

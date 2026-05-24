@@ -1,0 +1,32 @@
+.skeleton-loader {
+  background: linear-gradient(90deg, rgba(6, 182, 212, 0.05) 25%, rgba(6, 182, 212, 0.15) 50%, rgba(6, 182, 212, 0.05) 75%),
+              linear-gradient(rgba(6, 182, 212, 0.03) 1px, transparent 1px),
+              linear-gradient(90deg, rgba(6, 182, 212, 0.03) 1px, transparent 1px);
+  background-size: 200% 100%, 10px 10px, 10px 10px;
+  animation: data-computing 2s infinite linear;
+  box-shadow: inset 0 0 10px rgba(6, 182, 212, 0.05);
+  border: 1px solid rgba(6, 182, 212, 0.1);
+  position: relative;
+  overflow: hidden;
+}
+
+.skeleton-loader::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 50%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(6, 182, 212, 0.2), transparent);
+  animation: data-sweep 2s infinite cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes data-computing {
+  0% { background-position: 200% 0, 0 0, 0 0; }
+  100% { background-position: -200% 0, 0 0, 0 0; }
+}
+
+@keyframes data-sweep {
+  0% { left: -100%; }
+  100% { left: 200%; }
+}
