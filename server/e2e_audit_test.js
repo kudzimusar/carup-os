@@ -4,7 +4,7 @@ const PORT = 5000;
 const BASE_URL = `http://localhost:${PORT}`;
 
 // Helper to make request
-function request(method, path, body = null) {
+function request(method, path, body = null, token = null, headers = {}) {
   return new Promise((resolve, reject) => {
     const options = {
       hostname: 'localhost',
@@ -12,7 +12,9 @@ function request(method, path, body = null) {
       path: path,
       method: method,
       headers: {
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        ...headers
       }
     };
 
@@ -48,9 +50,12 @@ async function runE2EAudit() {
   console.log('======================================================================');
   
   try {
+    const login = await request('POST', '/api/auth/login', { username: 'auditor', role: 'admin' });
+    const token = login.data.token;
+
     // Step 1: Retrieve Initial Metrics
     console.log('\n[E2E STEP 1] Fetching Initial Admin Metrics...');
-    const initialMetricsRes = await request('GET', '/api/admin/metrics');
+    const initialMetricsRes = await request('GET', '/api/admin/metrics', null, token);
     if (initialMetricsRes.status !== 200) {
       throw new Error(`Failed to fetch initial metrics: ${JSON.stringify(initialMetricsRes.data)}`);
     }
@@ -78,7 +83,7 @@ async function runE2EAudit() {
       sellerName: 'Simba Murwira'
     };
     
-    const regRes = await request('POST', '/api/vehicles', newVehiclePayload);
+    const regRes = await request('POST', '/api/vehicles', newVehiclePayload, token);
     if (regRes.status !== 201) {
       throw new Error(`Failed to register vehicle: ${JSON.stringify(regRes.data)}`);
     }
@@ -96,7 +101,7 @@ async function runE2EAudit() {
     const docTypesToVerify = ['zimra', 'bluebook', 'cid', 'vid'];
     for (const doc of docTypesToVerify) {
       console.log(`Verifying docType: "${doc}" for VIN: ${testVin}...`);
-      const verifyRes = await request('POST', '/api/documents/verify', { vin: testVin, docType: doc });
+      const verifyRes = await request('POST', '/api/documents/verify', { vin: testVin, docType: doc }, token);
       if (verifyRes.status !== 200) {
         throw new Error(`Failed to verify document ${doc}: ${JSON.stringify(verifyRes.data)}`);
       }
@@ -114,7 +119,7 @@ async function runE2EAudit() {
     };
     
     console.log('1. Mechanic logs the component swap...');
-    const swapRes = await request('POST', '/api/parts/swap', swapPayload);
+    const swapRes = await request('POST', '/api/parts/swap', swapPayload, token);
     if (swapRes.status !== 201) {
       throw new Error(`Failed to log parts swap: ${JSON.stringify(swapRes.data)}`);
     }
@@ -122,7 +127,7 @@ async function runE2EAudit() {
     console.log('Handshake notification received:', JSON.stringify(swapNotification, null, 2));
     
     console.log('2. Fetching pending notifications to confirm swap is listed...');
-    const notificationsRes = await request('GET', '/api/notifications');
+    const notificationsRes = await request('GET', '/api/notifications', null, token);
     if (notificationsRes.status !== 200) {
       throw new Error('Failed to fetch pending swap notifications');
     }
@@ -133,7 +138,7 @@ async function runE2EAudit() {
     console.log('Pending swap handshake found in notifications database.');
 
     console.log('3. Owner signs off component swap (Approving Handshake)...');
-    const approveRes = await request('POST', '/api/parts/approve', { id: pendingSwap.id });
+    const approveRes = await request('POST', '/api/parts/approve', { id: pendingSwap.id }, token);
     if (approveRes.status !== 200) {
       throw new Error(`Failed to approve swap: ${JSON.stringify(approveRes.data)}`);
     }
@@ -157,7 +162,7 @@ async function runE2EAudit() {
       paymentMethod: 'Diaspora Split (Mukuru + InnBucks)',
       buyerName: 'Tendai Mutasa'
     };
-    const escrowRes = await request('POST', '/api/escrows/create', escrowPayload);
+    const escrowRes = await request('POST', '/api/escrows/create', escrowPayload, token, {'Idempotency-Key':`escrow-create-${Date.now()}`});
     if (escrowRes.status !== 201) {
       throw new Error(`Failed to create SafePay escrow: ${JSON.stringify(escrowRes.data)}`);
     }
@@ -185,7 +190,7 @@ async function runE2EAudit() {
       paynowreference: 'paynow-e2e-ref-7790',
       amount: 35000
     };
-    const hookRes = await request('POST', '/api/paynow/hook', hookPayload);
+    const hookRes = await request('POST', '/api/paynow/hook', hookPayload, token);
     if (hookRes.status !== 200) {
       throw new Error(`Failed to invoke Paynow Webhook callback: ${JSON.stringify(hookRes.data)}`);
     }
@@ -198,7 +203,7 @@ async function runE2EAudit() {
 
     // Step 6: Flagging the vehicle as stolen and verifying Trust drops to 0%
     console.log('\n[E2E STEP 6] Simulating Stolen Vehicle Report by ZRP Police Recovery Desk...');
-    const stolenRes = await request('POST', '/api/vehicles/stolen', { vin: testVin, stolen: true });
+    const stolenRes = await request('POST', '/api/vehicles/stolen', { vin: testVin, stolen: true }, token);
     if (stolenRes.status !== 200) {
       throw new Error(`Failed to flag vehicle as stolen: ${JSON.stringify(stolenRes.data)}`);
     }
@@ -212,7 +217,7 @@ async function runE2EAudit() {
 
     // Step 7: Fetching Aggregated Counts from /api/admin/metrics to prove incrementation
     console.log('\n[E2E STEP 7] Fetching Final Admin Metrics to Prove Ledger Incrementation...');
-    const finalMetricsRes = await request('GET', '/api/admin/metrics');
+    const finalMetricsRes = await request('GET', '/api/admin/metrics', null, token);
     if (finalMetricsRes.status !== 200) {
       throw new Error(`Failed to fetch final metrics: ${JSON.stringify(finalMetricsRes.data)}`);
     }

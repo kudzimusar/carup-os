@@ -1,5 +1,14 @@
 const express = require('express');
 const cors = require('cors');
+const helmet = require('helmet');
+const rateLimit = require('express-rate-limit');
+const pinoHttp = require('pino-http');
+const jwt = require('jsonwebtoken');
+const { randomUUID } = require('crypto');
+const config = require('./config');
+const { requireAuth, requireRole } = require('./middleware/auth');
+const { validateBody } = require('./middleware/validate');
+const { queryModel } = require('./services/aiGateway');
 const multer = require('multer');
 const crypto = require('crypto');
 const path = require('path');
@@ -7,12 +16,20 @@ const fs = require('fs');
 const db = require('./db');
 
 const app = express();
-const PORT = process.env.PORT || 5000;
+const metrics = { requests: 0, errors: 0 };
+const PORT = config.port;
 
 // Enable CORS and JSON parsing middlewares
-app.use(cors());
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+app.use(pinoHttp());
+app.use(helmet());
+app.use(cors({ origin: (origin, cb) => {
+  if (!origin || config.corsOrigins.includes(origin)) return cb(null, true);
+  return cb(new Error('Not allowed by CORS'));
+}}));
+app.use(express.json({ limit: '1mb' }));
+app.use(express.urlencoded({ extended: true, limit: '1mb' }));
+app.use(rateLimit({ windowMs: config.rateLimitWindowMs, max: config.rateLimitMax }));
+app.use((req,res,next)=>{ metrics.requests += 1; next(); });
 
 // Setup file uploads directory
 const uploadsDir = path.resolve(__dirname, 'uploads');
@@ -180,6 +197,37 @@ async function getFormattedVehicle(vin) {
 // REST API ENDPOINTS
 // ----------------------------------------------------
 
+
+const docTypeColumnMap = {
+  zimra: 'zimra_status',
+  bluebook: 'bluebook_status',
+  cid: 'cid_status',
+  vid: 'vid_status',
+  zinara: 'zinara_status',
+  insurance: 'insurance_status',
+  invoices: 'invoices_status'
+};
+
+function errorHandler(err, req, res, next) {
+  metrics.errors += 1;
+  req.log?.error(err);
+  res.status(500).json({ error: 'Internal server error' });
+}
+
+const idempotencyCache = new Map();
+function idempotency(req, res, next) {
+  const key = req.headers['idempotency-key'];
+  if (!key) return next();
+  const cacheKey = `${req.method}:${req.path}:${key}`;
+  if (idempotencyCache.has(cacheKey)) return res.json(idempotencyCache.get(cacheKey));
+  const originalJson = res.json.bind(res);
+  res.json = (body) => {
+    idempotencyCache.set(cacheKey, body);
+    return originalJson(body);
+  };
+  next();
+}
+
 // GET /api/vehicles
 app.get('/api/vehicles', async (req, res) => {
   try {
@@ -211,7 +259,7 @@ app.get('/api/vehicles/:vin', async (req, res) => {
 });
 
 // POST /api/vehicles (Register new vehicle)
-app.post('/api/vehicles', async (req, res) => {
+app.post('/api/vehicles', requireAuth, requireRole('admin','garage'), validateBody('createVehicle'), async (req, res) => {
   const {
     vin, licensePlate, make, model, year, price, mileage,
     engineNo, ecuSerial, gearboxSerial, transmission, fuel, color,
@@ -277,7 +325,7 @@ app.post('/api/vehicles', async (req, res) => {
 });
 
 // POST /api/documents/upload (OCR scanner ingestion)
-app.post('/api/documents/upload', upload.single('file'), async (req, res) => {
+app.post('/api/documents/upload', requireAuth, requireRole('government','admin'), upload.single('file'), validateBody('verifyDoc'), async (req, res) => {
   const { vin, docType } = req.body;
 
   if (!vin || !docType) {
@@ -290,8 +338,8 @@ app.post('/api/documents/upload', upload.single('file'), async (req, res) => {
       return res.status(404).json({ error: 'Vehicle not found.' });
     }
 
-    const docColumn = `${docType.toLowerCase()}_status`;
-    // Update document verification status to verified
+    const docColumn = docTypeColumnMap[docType.toLowerCase()];
+    if (!docColumn) return res.status(400).json({ error: 'Unsupported docType' });
     await db.run(`UPDATE vehicles SET ${docColumn} = 'verified' WHERE vin = ?`, [vin]);
 
     // Handle OCR mileage verification updates
@@ -334,7 +382,7 @@ app.post('/api/documents/upload', upload.single('file'), async (req, res) => {
 });
 
 // POST /api/parts/swap (Mechanic logs a parts change)
-app.post('/api/parts/swap', async (req, res) => {
+app.post('/api/parts/swap', requireAuth, requireRole('garage','admin'), validateBody('swapPart'), async (req, res) => {
   const { vin, partName, newSerial, workshop } = req.body;
 
   if (!vin || !partName || !newSerial) {
@@ -401,7 +449,7 @@ app.get('/api/notifications', async (req, res) => {
 });
 
 // POST /api/parts/approve (Owner signs off component swap)
-app.post('/api/parts/approve', async (req, res) => {
+app.post('/api/parts/approve', requireAuth, requireRole('consumer','admin'), validateBody('actionById'), async (req, res) => {
   const { id } = req.body; // Can be dbId or parsed notification id
 
   if (!id) {
@@ -480,7 +528,7 @@ app.post('/api/parts/approve', async (req, res) => {
 });
 
 // POST /api/parts/reject (Owner flags unauthorized parts change)
-app.post('/api/parts/reject', async (req, res) => {
+app.post('/api/parts/reject', requireAuth, requireRole('consumer','admin'), validateBody('actionById'), async (req, res) => {
   const { id } = req.body;
 
   if (!id) {
@@ -566,7 +614,7 @@ app.get('/api/escrows', async (req, res) => {
 });
 
 // POST /api/escrows/create (Create SafePay transaction)
-app.post('/api/escrows/create', async (req, res) => {
+app.post('/api/escrows/create', requireAuth, validateBody('createEscrow'), idempotency, async (req, res) => {
   const { vin, amount, paymentMethod, buyerName } = req.body;
 
   if (!vin || !amount || !paymentMethod) {
@@ -620,7 +668,7 @@ app.post('/api/escrows/create', async (req, res) => {
 });
 
 // POST /api/escrows/:id/settle (Release SafePay funds to seller)
-app.post('/api/escrows/:id/settle', async (req, res) => {
+app.post('/api/escrows/:id/settle', requireAuth, requireRole('admin','corporate'), idempotency, async (req, res) => {
   const { id } = req.params;
 
   try {
@@ -683,7 +731,7 @@ app.post('/api/escrows/:id/settle', async (req, res) => {
 });
 
 // POST /api/chats (Save chat message)
-app.post('/api/chats', async (req, res) => {
+app.post('/api/chats', requireAuth, validateBody('chat'), async (req, res) => {
   const { department, sender, message } = req.body;
   if (!department || !sender || !message) {
     return res.status(400).json({ error: 'Department, sender, and message are required.' });
@@ -714,7 +762,7 @@ app.get('/api/chats/:department', async (req, res) => {
 });
 
 // POST /api/documents/verify (Verify document programmatically without file upload)
-app.post('/api/documents/verify', async (req, res) => {
+app.post('/api/documents/verify', requireAuth, requireRole('government','admin'), validateBody('verifyDoc'), async (req, res) => {
   const { vin, docType } = req.body;
 
   if (!vin || !docType) {
@@ -727,7 +775,8 @@ app.post('/api/documents/verify', async (req, res) => {
       return res.status(404).json({ error: 'Vehicle not found.' });
     }
 
-    const docColumn = `${docType.toLowerCase()}_status`;
+    const docColumn = docTypeColumnMap[docType.toLowerCase()];
+    if (!docColumn) return res.status(400).json({ error: 'Unsupported docType' });
     await db.run(`UPDATE vehicles SET ${docColumn} = 'verified' WHERE vin = ?`, [vin]);
 
     const sourceMap = {
@@ -1136,3 +1185,31 @@ db.initDb().then(() => {
   console.error('Database failed to initialize:', err);
   process.exit(1);
 });
+
+
+app.post('/api/auth/login', validateBody('login'), (req, res) => {
+  const { username, role } = req.body;
+  const token = jwt.sign({ sub: username, role }, config.jwtSecret, { expiresIn: '8h' });
+  res.json({ token, role, username });
+});
+
+app.get('/health', (req, res) => res.json({ status: 'ok' }));
+app.get('/metrics', (req,res) => res.json(metrics));
+
+app.get('/ready', async (req, res) => {
+  try {
+    await db.get('SELECT 1 as ok');
+    res.json({ status: 'ready' });
+  } catch {
+    res.status(503).json({ status: 'not_ready' });
+  }
+});
+
+app.post('/api/ai/query', requireAuth, requireRole('admin','corporate','government'), validateBody('aiQuery'), async (req, res, next) => {
+  try {
+    const result = await queryModel(req.body);
+    res.json({ id: randomUUID(), ...result });
+  } catch (e) { next(e); }
+});
+
+app.use(errorHandler);

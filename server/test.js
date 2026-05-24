@@ -4,7 +4,7 @@ const PORT = 5000;
 const BASE_URL = `http://localhost:${PORT}`;
 
 // Helper to make request
-function request(method, path, body = null) {
+function request(method, path, body = null, token = null, headers = {}) {
   return new Promise((resolve, reject) => {
     const options = {
       hostname: 'localhost',
@@ -12,7 +12,9 @@ function request(method, path, body = null) {
       path: path,
       method: method,
       headers: {
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        ...headers
       }
     };
 
@@ -46,9 +48,12 @@ async function runTests() {
   console.log('Starting backend REST API verification tests...');
 
   try {
+    const login = await request('POST', '/api/auth/login', { username: 'tester', role: 'admin' });
+    const token = login.data.token;
+
     // 1. Get vehicles
     console.log('Testing GET /api/vehicles...');
-    const vehiclesRes = await request('GET', '/api/vehicles');
+    const vehiclesRes = await request('GET', '/api/vehicles', null, token);
     if (vehiclesRes.status !== 200) throw new Error('GET /api/vehicles failed');
     console.log(`Successfully retrieved ${vehiclesRes.data.length} vehicles.`);
 
@@ -72,7 +77,7 @@ async function runTests() {
       sellerType: 'Private Seller',
       sellerName: 'John Doe'
     };
-    const regRes = await request('POST', '/api/vehicles', newVehicle);
+    const regRes = await request('POST', '/api/vehicles', newVehicle, token);
     if (regRes.status !== 201) throw new Error('POST /api/vehicles failed: ' + JSON.stringify(regRes.data));
     console.log(`Successfully registered new vehicle. VIN: ${regRes.data.vin}`);
 
@@ -84,7 +89,7 @@ async function runTests() {
       paymentMethod: 'Diaspora Split (Mukuru + InnBucks)',
       buyerName: 'Jane Smith'
     };
-    const escrowRes = await request('POST', '/api/escrows/create', escrowPayload);
+    const escrowRes = await request('POST', '/api/escrows/create', escrowPayload, token, {'Idempotency-Key':`escrow-create-${Date.now()}`});
     if (escrowRes.status !== 201) throw new Error('POST /api/escrows/create failed');
     const escrowId = escrowRes.data.id;
     console.log(`Successfully created escrow transaction. ID: ${escrowId}, Status: ${escrowRes.data.status}`);
@@ -97,7 +102,7 @@ async function runTests() {
       provider: 'EcoCash',
       amount: 15000
     };
-    const paynowRes = await request('POST', '/api/paynow/simulate-payment', paynowPayload);
+    const paynowRes = await request('POST', '/api/paynow/simulate-payment', paynowPayload, token);
     if (paynowRes.status !== 200) throw new Error('POST /api/paynow/simulate-payment failed');
     console.log(`Successfully simulated Paynow USSD push. Status: ${paynowRes.data.status}`);
 
@@ -109,19 +114,19 @@ async function runTests() {
       paynowreference: 'paynow-ref-12345',
       amount: 15000
     };
-    const hookRes = await request('POST', '/api/paynow/hook', hookPayload);
+    const hookRes = await request('POST', '/api/paynow/hook', hookPayload, token);
     if (hookRes.status !== 200) throw new Error('POST /api/paynow/hook failed');
     console.log(`Successfully simulated Paynow Webhook callback. New escrow status: ${hookRes.data.status}`);
 
     // 6. Settle escrow transaction
     console.log(`Testing POST /api/escrows/${escrowId}/settle...`);
-    const settleRes = await request('POST', `/api/escrows/${escrowId}/settle`);
+    const settleRes = await request('POST', `/api/escrows/${escrowId}/settle`, null, token, {'Idempotency-Key':`escrow-settle-${Date.now()}`});
     if (settleRes.status !== 200) throw new Error(`POST /api/escrows/${escrowId}/settle failed`);
     console.log(`Successfully settled escrow transaction. Status: ${settleRes.data.status}`);
 
     // 7. Verify Blockchain ledger entries
     console.log('Testing GET /api/blockchain...');
-    const blockRes = await request('GET', '/api/blockchain');
+    const blockRes = await request('GET', '/api/blockchain', null, token);
     if (blockRes.status !== 200) throw new Error('GET /api/blockchain failed');
     console.log(`Successfully retrieved blockchain notary blocks. Total height: ${blockRes.data.length}`);
     const lastBlock = blockRes.data[blockRes.data.length - 1];
@@ -130,7 +135,7 @@ async function runTests() {
 
     // 8. Verify Commissions Ledger
     console.log('Testing GET /api/commissions...');
-    const commsRes = await request('GET', '/api/commissions');
+    const commsRes = await request('GET', '/api/commissions', null, token);
     if (commsRes.status !== 200) throw new Error('GET /api/commissions failed');
     console.log(`Successfully retrieved commissions ledger. Total count: ${commsRes.data.length}`);
     const matchedComm = commsRes.data.find(c => c.escrowId === escrowId);
@@ -139,7 +144,7 @@ async function runTests() {
 
     // 9. Verify Admin Metrics
     console.log('Testing GET /api/admin/metrics...');
-    const metricsRes = await request('GET', '/api/admin/metrics');
+    const metricsRes = await request('GET', '/api/admin/metrics', null, token);
     if (metricsRes.status !== 200) throw new Error('GET /api/admin/metrics failed');
     console.log('Admin metrics successfully verified:');
     console.log(JSON.stringify(metricsRes.data, null, 2));
