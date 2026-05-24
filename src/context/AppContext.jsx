@@ -3,6 +3,104 @@ import React, { createContext, useContext, useState, useEffect } from 'react'
 const AppContext = createContext()
 
 // Mock data representing a diverse set of vehicles in Zimbabwe
+
+const toNumber = (value, fallback = 0) => Number.isFinite(Number(value)) ? Number(value) : fallback
+
+const normalizeMileageReadings = (historyLogs = []) => {
+  return historyLogs
+    .filter(log => log?.desc && (log.desc.toLowerCase().includes('odometer') || log.desc.toLowerCase().includes('km')))
+    .map(log => ({
+      date: log.date,
+      valueKm: toNumber((log.desc.match(/([0-9,]+)/)?.[1] || '0').replace(/,/g, '')),
+      source: log.source || 'Unknown',
+      verified: !!log.verified
+    }))
+    .filter(r => r.valueKm > 0)
+    .sort((a, b) => new Date(a.date) - new Date(b.date))
+}
+
+const detectRollback = (readings = []) => {
+  for (let i = 1; i < readings.length; i++) {
+    if (readings[i].valueKm < readings[i - 1].valueKm) return true
+  }
+  return false
+}
+
+const buildVehicleHistoryReport = (vehicle) => {
+  const mileageReadings = normalizeMileageReadings(vehicle.historyLogs || [])
+  const rollbackDetected = detectRollback(mileageReadings)
+  const theftTitle = {
+    stolenFlag: vehicle.documents?.cid !== 'verified',
+    titleFlags: vehicle.documents?.bluebook === 'verified' ? [] : ['ownership-doc-incomplete'],
+    ownershipTransfers: Math.max(1, (vehicle.historyLogs || []).filter(l => l.type === 'import').length)
+  }
+
+  const docs = vehicle.documents || {}
+  const docStatuses = Object.values(docs)
+  const verifiedDocs = docStatuses.filter(v => v === 'verified').length
+  const coverage = docStatuses.length ? Math.round((verifiedDocs / docStatuses.length) * 100) : 0
+
+  const damageIncidents = (vehicle.historyLogs || [])
+    .filter(l => /accident|damage|collision|repair/i.test(l.desc || ''))
+    .map(l => ({ date: l.date, severity: 'minor', area: 'unknown', source: l.source || 'Unknown' }))
+
+  const confidence = coverage >= 75 ? 'high' : coverage >= 45 ? 'medium' : 'low'
+
+  return {
+    meta: {
+      reportId: `CRP-${vehicle.vin.slice(-6)}`,
+      generatedAt: new Date().toISOString(),
+      dataCoverageScore: coverage,
+      sourcesCount: new Set((vehicle.historyLogs || []).map(l => l.source)).size
+    },
+    identity: {
+      vinDecoded: {
+        make: vehicle.make,
+        model: vehicle.model,
+        year: vehicle.year,
+        engine: vehicle.engineNo,
+        drivetrain: vehicle.transmission
+      }
+    },
+    mileage: {
+      readings: mileageReadings,
+      rollbackDetected,
+      anomalyScore: rollbackDetected ? 90 : mileageReadings.length > 1 ? 8 : 35
+    },
+    damage: {
+      incidents: damageIncidents,
+      totalIncidents: damageIncidents.length,
+      maxSeverity: damageIncidents.length ? 'minor' : 'none'
+    },
+    theftTitle,
+    marketValue: {
+      currency: 'USD',
+      estimatedLow: Math.round(vehicle.price * 0.9),
+      estimatedHigh: Math.round(vehicle.price * 1.1),
+      position: 'fair'
+    },
+    regulatoryChecks: {
+      zimra: docs.zimra || 'missing',
+      zinara: docs.zinara || 'missing',
+      cid: docs.cid || 'missing',
+      bluebook: docs.bluebook || 'missing',
+      vid: docs.vid || 'missing'
+    },
+    confidence: {
+      overall: confidence,
+      bySection: {
+        mileage: mileageReadings.length ? 'high' : 'low',
+        theftTitle: docs.cid === 'verified' ? 'high' : 'medium',
+        damage: damageIncidents.length ? 'medium' : 'low',
+        regulatory: confidence
+      }
+    },
+    disclaimer: {
+      text: 'This report supports decisions but does not replace a physical inspection.'
+    }
+  }
+}
+
 const initialVehicles = [
   {
     vin: "AHTGD6120J7892110",
@@ -146,7 +244,7 @@ const initialVehicles = [
 ]
 
 export const AppProvider = ({ children }) => {
-  const [vehicles, setVehicles] = useState(initialVehicles)
+  const [vehicles, setVehicles] = useState(initialVehicles.map(v => ({ ...v, historyReport: buildVehicleHistoryReport(v) })))
   const [notifications, setNotifications] = useState([])
   const [escrows, setEscrows] = useState([])
   const [whatsappQueue, setWhatsappQueue] = useState([])
@@ -205,6 +303,22 @@ export const AppProvider = ({ children }) => {
     setComparedVins(prev => prev.filter(item => item !== vin));
   }
 
+  const getHistoryReportByVin = (vin) => vehicles.find(v => v.vin === vin)?.historyReport || null
+
+  const getReportSnapshot = (vin) => {
+    const report = getHistoryReportByVin(vin)
+    if (!report) return null
+    const theftStatus = report.theftTitle.stolenFlag ? 'flagged' : 'clear'
+    const mileageStatus = report.mileage.rollbackDetected ? 'warning' : 'clear'
+    return {
+      theftStatus,
+      mileageStatus,
+      damageStatus: report.damage.maxSeverity === 'none' ? 'none' : report.damage.maxSeverity,
+      confidence: report.confidence.overall,
+      riskTier: theftStatus === 'flagged' || mileageStatus === 'warning' ? 'high' : report.confidence.overall === 'low' ? 'medium' : 'low'
+    }
+  }
+
   const clearCompare = () => {
     setComparedVins([]);
   }
@@ -242,7 +356,7 @@ export const AppProvider = ({ children }) => {
 
       if (vehiclesRes.ok) {
         const vehiclesData = await vehiclesRes.json()
-        setVehicles(vehiclesData)
+        setVehicles(vehiclesData.map(v => ({ ...v, historyReport: buildVehicleHistoryReport(v) })))
       }
       if (notificationsRes.ok) {
         const notificationsData = await notificationsRes.json()
@@ -297,7 +411,7 @@ export const AppProvider = ({ children }) => {
     }
 
     const updatedVehicle = await response.json()
-    setVehicles(prev => prev.map(v => v.vin === vin ? updatedVehicle : v))
+    setVehicles(prev => prev.map(v => v.vin === vin ? { ...updatedVehicle, historyReport: buildVehicleHistoryReport(updatedVehicle) } : v))
     return updatedVehicle
   }
 
@@ -471,7 +585,7 @@ export const AppProvider = ({ children }) => {
     }
 
     const updatedVehicle = await response.json()
-    setVehicles(prev => prev.map(v => v.vin === vin ? updatedVehicle : v))
+    setVehicles(prev => prev.map(v => v.vin === vin ? { ...updatedVehicle, historyReport: buildVehicleHistoryReport(updatedVehicle) } : v))
     return updatedVehicle
   }
 
@@ -523,7 +637,7 @@ export const AppProvider = ({ children }) => {
     }
 
     const updatedVehicle = await response.json()
-    setVehicles(prev => prev.map(v => v.vin === vin ? updatedVehicle : v))
+    setVehicles(prev => prev.map(v => v.vin === vin ? { ...updatedVehicle, historyReport: buildVehicleHistoryReport(updatedVehicle) } : v))
     return updatedVehicle
   }
 
@@ -545,6 +659,8 @@ export const AppProvider = ({ children }) => {
       addToCompare,
       removeFromCompare,
       clearCompare,
+    getHistoryReportByVin,
+    getReportSnapshot,
       uploadDocument,
       triggerPartSentryChange,
       approvePartSentrySwap,

@@ -7,11 +7,12 @@ import { Shield, Gauge, Fuel, CheckCircle, ShoppingCart, Zap, ShieldAlert, Activ
 
 export default function IntelligenceCard({ vehicle }) {
   const navigate = useNavigate();
-  const { cartItems, globalLocks, addToCart, removeFromCart, comparedVins, addToCompare, removeFromCompare } = useApp();
+  const { cartItems, globalLocks, addToCart, removeFromCart, comparedVins, addToCompare, removeFromCompare, getReportSnapshot } = useApp();
 
   const isLocked = globalLocks?.some(l => l.vin === vehicle.vin);
   const isReserved = cartItems?.includes(vehicle.vin);
   const isCompared = comparedVins?.includes(vehicle.vin);
+  const reportSnapshot = getReportSnapshot?.(vehicle.vin);
 
   const getTrustColor = (score) => {
     if (score >= 80) return '#10b981'; // emerald
@@ -206,6 +207,16 @@ export default function IntelligenceCard({ vehicle }) {
               <CheckCircle size={12} /> Mechanic Verified
             </Badge>
           )}
+        </div>
+
+
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+          <Badge variant={reportSnapshot?.mileageStatus === 'warning' ? 'alert' : 'high'} style={{ fontSize: '11px', padding: '4px 8px' }}>
+            {reportSnapshot?.mileageStatus === 'warning' ? 'Mileage Anomaly' : 'Mileage Clear'}
+          </Badge>
+          <Badge variant={reportSnapshot?.theftStatus === 'flagged' ? 'alert' : 'high'} style={{ fontSize: '11px', padding: '4px 8px' }}>
+            {reportSnapshot?.theftStatus === 'flagged' ? 'Theft/Title Flag' : 'Theft/Title Clear'}
+          </Badge>
         </div>
 
         {/* Specs Grid */}

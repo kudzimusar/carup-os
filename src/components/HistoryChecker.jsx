@@ -6,13 +6,14 @@ import GlassCard from './ui/GlassCard'
 import Badge from './ui/Badge'
 
 export default function HistoryChecker() {
-  const { vehicles } = useApp()
+  const { vehicles, getHistoryReportByVin } = useApp()
   const location = useLocation()
   const [query, setQuery] = useState('')
   const [loading, setLoading] = useState(false)
   const [report, setReport] = useState(null)
   const [errorMsg, setErrorMsg] = useState('')
   const [animatedTrust, setAnimatedTrust] = useState(0)
+  const [activeTab, setActiveTab] = useState('overview')
 
   useEffect(() => {
     if (location.state?.vin) {
@@ -23,6 +24,7 @@ export default function HistoryChecker() {
 
   useEffect(() => {
     if (report) {
+      setActiveTab('overview')
       setAnimatedTrust(0)
       const timer = setTimeout(() => {
         setAnimatedTrust(report.trustIndex)
@@ -148,6 +150,31 @@ export default function HistoryChecker() {
       case 'missing': return 'var(--red-primary)';
       default: return 'var(--text-muted)';
     }
+  }
+
+
+  const renderCarVerticalStyleSummary = (vehicleReport) => {
+    if (!vehicleReport) return null
+    return (
+      <GlassCard style={{ display: 'flex', flexDirection: 'column', gap: '12px', background: 'rgba(0,0,0,0.25)' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
+          <h3 style={{ fontSize: '18px' }}>Vehicle History Report</h3>
+          <Badge variant={vehicleReport.confidence.overall === 'high' ? 'high' : vehicleReport.confidence.overall === 'medium' ? 'mid' : 'alert'}>
+            Confidence: {vehicleReport.confidence.overall}
+          </Badge>
+        </div>
+        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+          {['overview','timeline','mileage','damage','value'].map(tab => (
+            <button key={tab} className="btn-secondary" style={{ padding: '6px 10px', fontSize: '12px' }} onClick={() => setActiveTab(tab)}>{tab}</button>
+          ))}
+        </div>
+        {activeTab === 'overview' && <p style={{ color: 'var(--text-muted)', fontSize: '13px' }}>Coverage {vehicleReport.meta.dataCoverageScore}% • Sources {vehicleReport.meta.sourcesCount} • Report ID {vehicleReport.meta.reportId}</p>}
+        {activeTab === 'mileage' && <p style={{ color: vehicleReport.mileage.rollbackDetected ? 'var(--red-primary)' : 'var(--emerald-primary)', fontSize: '13px' }}>{vehicleReport.mileage.rollbackDetected ? 'Mileage anomaly detected.' : 'Mileage progression appears consistent.'}</p>}
+        {activeTab === 'damage' && <p style={{ color: 'var(--text-muted)', fontSize: '13px' }}>Damage incidents: {vehicleReport.damage.totalIncidents} (Max severity: {vehicleReport.damage.maxSeverity})</p>}
+        {activeTab === 'value' && <p style={{ color: 'var(--text-muted)', fontSize: '13px' }}>Market range: ${vehicleReport.marketValue.estimatedLow.toLocaleString()} - ${vehicleReport.marketValue.estimatedHigh.toLocaleString()}</p>}
+        {activeTab === 'timeline' && <p style={{ color: 'var(--text-muted)', fontSize: '13px' }}>Historical events: {(vehicleReport.mileage.readings || []).length} mileage points tracked.</p>}
+      </GlassCard>
+    )
   }
 
   const renderFraudDetectionBreakdown = (report) => {
@@ -400,7 +427,8 @@ export default function HistoryChecker() {
           </GlassCard>
 
           {/* AI Fraud Detection & Trust Index Breakdown */}
-          {renderFraudDetectionBreakdown(report)}
+          {renderCarVerticalStyleSummary(getHistoryReportByVin(report.vin))}
+                {renderFraudDetectionBreakdown(report)}
 
           {/* Odometer Progression section */}
           {renderOdometerChart(report.historyLogs)}

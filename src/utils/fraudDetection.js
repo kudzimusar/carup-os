@@ -100,22 +100,44 @@ export const detectOdometerRollback = async (vin, currentMileage, historicalReco
  * @returns {Object} - Complete fraud report
  */
 export const runComprehensiveFraudCheck = async (vehicleData) => {
-  const { vin, mileage, queryContext, historicalRecords } = vehicleData;
-  
+  const { vin, mileage, queryContext, historicalRecords, historyReport, vehicle } = vehicleData;
+
   const vinCheck = await detectVinCloning(vin, queryContext);
   const odometerCheck = await detectOdometerRollback(vin, mileage, historicalRecords);
-  
-  const overallRiskScore = Math.max(vinCheck.riskScore, odometerCheck.riskScore);
-  const isFlagged = vinCheck.isFlagged || odometerCheck.isFlagged;
-  
+
+  const report = historyReport || vehicle?.historyReport;
+  const theftTitleRisk = report?.theftTitle?.stolenFlag ? 95 : (report?.theftTitle?.titleFlags?.length ? 70 : 10);
+  const damageSeverity = report?.damage?.maxSeverity || 'none';
+  const damageRisk = damageSeverity === 'severe' ? 85 : damageSeverity === 'moderate' ? 60 : damageSeverity === 'minor' ? 30 : 5;
+  const confidenceRisk = report?.confidence?.overall === 'low' ? 55 : report?.confidence?.overall === 'medium' ? 25 : 5;
+
+  const overallRiskScore = Math.max(vinCheck.riskScore, odometerCheck.riskScore, theftTitleRisk, damageRisk, confidenceRisk);
+  const riskTier = overallRiskScore >= 75 ? 'high' : overallRiskScore >= 45 ? 'medium' : 'low';
+  const isFlagged = riskTier !== 'low';
+
+  const explanations = [];
+  if (report?.mileage?.rollbackDetected || odometerCheck.isFlagged) explanations.push('Mileage anomaly detected from time-series records.');
+  if (report?.theftTitle?.stolenFlag) explanations.push('Vehicle appears on stolen watchlist signals.');
+  if ((report?.theftTitle?.titleFlags || []).length) explanations.push(`Title flags detected: ${(report.theftTitle.titleFlags || []).join(', ')}.`);
+  if (damageSeverity !== 'none') explanations.push(`Damage history indicates ${damageSeverity} severity incidents.`);
+  if (report?.confidence?.overall === 'low') explanations.push('Low data confidence: limited source coverage.');
+
   return {
     vin,
     isFlagged,
+    riskTier,
     overallRiskScore,
     checks: {
       vinCloning: vinCheck,
-      odometerRollback: odometerCheck
+      odometerRollback: odometerCheck,
+      theftTitle: { riskScore: theftTitleRisk },
+      damage: { riskScore: damageRisk, severity: damageSeverity },
+      confidence: { riskScore: confidenceRisk, level: report?.confidence?.overall || 'unknown' }
     },
+    explanations,
+    recommendedActions: isFlagged
+      ? ['Verify identity/title documents physically.', 'Request third-party inspection before payment.']
+      : ['Proceed with standard purchase workflow.'],
     timestamp: new Date().toISOString()
   };
 };
