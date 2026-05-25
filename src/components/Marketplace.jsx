@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useApp } from '../context/AppContext'
 import { Shield, MapPin, Gauge, Fuel, CheckCircle, AlertTriangle, X, DollarSign, ExternalLink, ShieldAlert, ShieldCheck, MessageSquare, ShoppingCart, Trash2 } from 'lucide-react'
 import { ReservationLedger } from './ui/ReservationLedger'
+import { useDiscovery, WatchlistBadge, AddictionSidebar, SimilarVehiclesFeed } from './discovery/AddictionLoops'
 
 export default function Marketplace() {
   const navigate = useNavigate()
@@ -14,6 +15,16 @@ export default function Marketplace() {
   const [comparedVins, setComparedVins] = useState([])
   const [showComparisonModal, setShowComparisonModal] = useState(false)
   const [showCartModal, setShowCartModal] = useState(false)
+  
+  const { toggleWatchlist, watchlist, trackView, saveSearch } = useDiscovery()
+
+  // Track search when term changes significantly or user pauses
+  React.useEffect(() => {
+    if (searchTerm.length > 2) {
+      const timer = setTimeout(() => saveSearch({ query: searchTerm, resultsCount: filteredVehicles.length }), 1500)
+      return () => clearTimeout(timer)
+    }
+  }, [searchTerm])
 
 
 
@@ -33,6 +44,7 @@ export default function Marketplace() {
 
   useEffect(() => {
     if (selectedVehicle) {
+      trackView(selectedVehicle.vin)
       setAnimatedTrust(0)
       const timer = setTimeout(() => {
         setAnimatedTrust(selectedVehicle.trustIndex)
@@ -217,21 +229,38 @@ export default function Marketplace() {
         </div>
       </div>
 
-      {/* Vehicle Grid */}
-      <div className="grid-3">
+      {/* Addiction Loops Layout Container */}
+      <div style={{ display: 'flex', gap: '24px', alignItems: 'flex-start', flexWrap: 'wrap' }}>
+        
+        {/* Main Grid */}
+        <div style={{ flex: '1', minWidth: '0' }}>
+          <div className="grid-3">
         {filteredVehicles.map(vehicle => (
-          <div key={vehicle.vin} className="glass-card" style={{ display: 'flex', flexDirection: 'column', gap: '16px', cursor: 'pointer' }} onClick={() => setSelectedVehicle(vehicle)}>
-            {renderVehicleImage(vehicle.color, vehicle.make)}
+          <div key={vehicle.vin} className="glass-card" style={{ display: 'flex', flexDirection: 'column', gap: '16px', cursor: 'pointer', position: 'relative' }} onClick={() => setSelectedVehicle(vehicle)}>
+            {/* Watchlist Quick Toggle over Image */}
+                <div style={{ position: 'absolute', top: '12px', right: '12px', zIndex: 10 }}>
+                  <button 
+                    onClick={(e) => { e.stopPropagation(); toggleWatchlist(vehicle.vin); }}
+                    className={`p-2 rounded-full backdrop-blur-md border transition-all ${watchlist.includes(vehicle.vin) ? 'bg-rose-500/20 border-rose-500/50 text-rose-500 shadow-[0_0_10px_rgba(244,63,94,0.3)]' : 'bg-black/40 border-white/10 text-white/70 hover:bg-black/60'}`}
+                  >
+                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill={watchlist.includes(vehicle.vin) ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg>
+                  </button>
+                </div>
+
+                {renderVehicleImage(vehicle.color, vehicle.make)}
             
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start' }}>
               <div>
                 <h3 style={{ fontSize: '18px', marginBottom: '4px' }}>{vehicle.year} {vehicle.make}</h3>
                 <p style={{ color: 'var(--text-muted)', fontSize: '14px' }}>{vehicle.model}</p>
               </div>
-              <span className={`trust-score-badge ${getTrustBadgeClass(vehicle.trustIndex)}`}>
-                <Shield size={14} />
-                {vehicle.trustIndex}% Trust
-              </span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <WatchlistBadge onClick={(e) => { e.stopPropagation(); toggleWatchlist(vehicle.vin); }} />
+                <span className={`trust-score-badge ${getTrustBadgeClass(vehicle.trustIndex)}`}>
+                  <Shield size={14} />
+                  {vehicle.trustIndex}% Trust
+                </span>
+              </div>
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', padding: '12px 0', borderTop: '1px solid var(--border-glass)', borderBottom: '1px solid var(--border-glass)' }}>
@@ -310,6 +339,24 @@ export default function Marketplace() {
             </div>
           </div>
         ))}
+          </div>
+          {filteredVehicles.length === 0 && (
+            <div style={{ padding: '40px', textAlign: 'center', color: 'var(--text-muted)' }}>
+              No vehicles match your criteria.
+            </div>
+          )}
+          
+          {/* Similar Vehicles Endless Feed Hook */}
+          <div style={{ marginTop: '40px' }}>
+             <SimilarVehiclesFeed />
+          </div>
+        </div>
+
+        {/* Sidebar Addiction Loops */}
+        <div style={{ width: '320px', flexShrink: 0, position: 'sticky', top: '24px' }}>
+           <AddictionSidebar />
+        </div>
+
       </div>
 
       {/* Digital Passport Detailed Modal overlay */}

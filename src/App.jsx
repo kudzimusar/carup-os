@@ -16,6 +16,9 @@ import GovernmentPortal from './components/GovernmentPortal';
 import ContentPage from './components/ContentPage';
 import Compare from './components/Compare';
 import DealerProfile from './components/DealerProfile';
+import VehicleDetail from './components/vehicle/VehicleDetail';
+import UploadUX from './components/seller/UploadUX';
+import MasterDashboard from './components/admin/MasterDashboard';
 
 function AppRoutes() {
   return (
@@ -23,6 +26,8 @@ function AppRoutes() {
       <Route path="/" element={<MainLayout />}>
         {/* Consumer Routes */}
         <Route index element={<MarketplaceHome />} />
+        <Route path="vehicle/:vin" element={<VehicleDetail />} />
+        <Route path="sell" element={<UploadUX />} />
         <Route path="passport" element={<HistoryChecker />} />
         <Route path="ocr" element={<GutuOCR />} />
         <Route path="partsentry" element={<PartSentry />} />
@@ -34,6 +39,7 @@ function AppRoutes() {
         <Route path="garage" element={<GaragePortal />} />
         <Route path="corporate" element={<CorporatePortal />} />
         <Route path="government" element={<GovernmentPortal />} />
+        <Route path="admin" element={<MasterDashboard />} />
         
         {/* Global/AI */}
         <Route path="gutu" element={<GutuAI />} />

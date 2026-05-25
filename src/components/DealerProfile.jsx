@@ -1,7 +1,7 @@
 import React, { useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
-import { Shield, MapPin, Gauge, Fuel, CheckCircle, ArrowLeft, Star, Phone, Mail, Award } from 'lucide-react';
+import { Shield, MapPin, Gauge, Fuel, CheckCircle, ArrowLeft, Star, Phone, Mail, Award, Building, CreditCard } from 'lucide-react';
 
 const TrustGauge = ({ score }) => {
   const radius = 36;
@@ -166,6 +166,32 @@ export default function DealerProfile() {
               <Mail size={20} style={{ marginRight: '10px' }}/> Send Inquiry
             </button>
           </div>
+        </div>
+      </div>
+
+      {/* Financing Partners Section */}
+      <div className="glass-panel" style={{ marginBottom: '40px', padding: '32px', borderRadius: '24px', position: 'relative', overflow: 'hidden' }}>
+        <h3 style={{ fontSize: '20px', marginBottom: '24px', display: 'flex', alignItems: 'center', gap: '12px', fontWeight: 700 }}>
+          <Building className="text-emerald" size={24} color="var(--emerald-primary)" />
+          Approved Financing Partners
+        </h3>
+        <div style={{ display: 'flex', gap: '20px', flexWrap: 'wrap' }}>
+          {[
+            { name: 'Stanbic Bank', rate: 'From 12.5% APR', desc: 'Premium Vehicle Finance' },
+            { name: 'CABS', rate: 'From 14% APR', desc: 'Flexible Asset Finance' },
+            { name: 'First Capital Bank', rate: 'From 13% APR', desc: 'Corporate & SME Finance' }
+          ].map((partner, idx) => (
+            <div key={idx} className="glass-card hover-offset" style={{ flex: '1 1 250px', padding: '20px', borderRadius: '16px', display: 'flex', alignItems: 'flex-start', gap: '16px' }}>
+              <div style={{ background: 'rgba(255,255,255,0.05)', padding: '12px', borderRadius: '12px' }}>
+                <CreditCard size={24} color="var(--theme-accent)" />
+              </div>
+              <div>
+                <h4 style={{ fontSize: '18px', fontWeight: 600, marginBottom: '4px' }}>{partner.name}</h4>
+                <p style={{ color: 'var(--emerald-primary)', fontSize: '14px', fontWeight: 700, marginBottom: '4px' }}>{partner.rate}</p>
+                <p style={{ color: 'var(--text-muted)', fontSize: '13px' }}>{partner.desc}</p>
+              </div>
+            </div>
+          ))}
         </div>
       </div>
 

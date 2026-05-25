@@ -6,6 +6,7 @@ import IntelligenceCard from '../ui/IntelligenceCard';
 import Badge from '../ui/Badge';
 import Skeleton from '../ui/Skeleton';
 import { Shield, MapPin, Gauge, Fuel, CheckCircle, ExternalLink, ShieldCheck, ShoppingCart, Sparkles, TrendingUp, Award, Zap, ShieldAlert, Activity, Command, Search } from 'lucide-react';
+import MarketplaceEnergy from './MarketplaceEnergy';
 
 export default function MarketplaceHome() {
   const navigate = useNavigate();
@@ -34,25 +35,46 @@ export default function MarketplaceHome() {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
       
-      {/* 1. Hero Search */}
+      {/* 1. Cinematic Hero Search */}
       <GlassCard className="active-neon-sweep" style={{
-        padding: '48px 32px',
+        padding: '64px 32px',
         textAlign: 'center',
-        background: 'linear-gradient(135deg, rgba(22, 27, 46, 0.8) 0%, rgba(11, 16, 32, 0.95) 100%)',
+        background: 'linear-gradient(270deg, rgba(22, 27, 46, 0.9), rgba(14, 165, 233, 0.05), rgba(22, 27, 46, 0.9))',
+        backgroundSize: '400% 400%',
+        animation: 'cinematicBg 15s ease infinite',
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
-        gap: '24px',
-        overflow: 'hidden'
+        gap: '32px',
+        overflow: 'hidden',
+        position: 'relative'
       }}>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', alignItems: 'center' }}>
-          <Badge variant="primary" style={{ padding: '6px 12px' }}>
-            <Sparkles size={14} /> AI-Powered OS
+        <style>
+          {`
+            @keyframes cinematicBg {
+              0% { background-position: 0% 50%; }
+              50% { background-position: 100% 50%; }
+              100% { background-position: 0% 50%; }
+            }
+            @keyframes marquee {
+              0% { transform: translateX(0); }
+              100% { transform: translateX(-10%); }
+            }
+          `}
+        </style>
+        
+        {/* Glow orbs */}
+        <div style={{ position: 'absolute', top: '-15%', left: '-10%', width: '50%', height: '50%', background: 'var(--cyan-primary)', filter: 'blur(140px)', opacity: 0.2, borderRadius: '50%', pointerEvents: 'none' }} />
+        <div style={{ position: 'absolute', bottom: '-15%', right: '-10%', width: '50%', height: '50%', background: 'var(--emerald-primary)', filter: 'blur(140px)', opacity: 0.15, borderRadius: '50%', pointerEvents: 'none' }} />
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', alignItems: 'center', position: 'relative', zIndex: 1 }}>
+          <Badge variant="primary" style={{ padding: '8px 16px', fontSize: '14px', letterSpacing: '1px', textTransform: 'uppercase' }}>
+            <Sparkles size={16} /> AI-Powered OS
           </Badge>
-          <h1 style={{ fontSize: '42px', lineHeight: '1.1', maxWidth: '800px' }}>
-            Zimbabwe's First Trust-Driven Automotive Ecosystem
+          <h1 style={{ fontSize: '48px', lineHeight: '1.1', maxWidth: '850px', textShadow: '0 4px 24px rgba(0,0,0,0.5)', fontWeight: 700 }}>
+            Zimbabwe's First <span style={{ color: 'var(--cyan-primary)' }}>Trust-Driven</span> Automotive Ecosystem
           </h1>
-          <p style={{ color: 'var(--text-muted)', maxWidth: '640px', fontSize: '16px' }}>
+          <p style={{ color: 'var(--text-muted)', maxWidth: '640px', fontSize: '18px', textShadow: '0 2px 10px rgba(0,0,0,0.5)' }}>
             Every listing verified by blockchain telemetry and government registries. Buy with zero risk.
           </p>
         </div>
@@ -70,16 +92,10 @@ export default function MarketplaceHome() {
           maxWidth: '100%',
           whiteSpace: 'nowrap',
           scrollbarWidth: 'none',
-          animation: 'marquee 20s linear infinite'
+          animation: 'marquee 20s linear infinite',
+          position: 'relative',
+          zIndex: 1
         }}>
-          <style>
-            {`
-              @keyframes marquee {
-                0% { transform: translateX(0); }
-                100% { transform: translateX(-10%); }
-              }
-            `}
-          </style>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--cyan-primary)' }}>
             <Activity size={16} /> <span style={{ fontSize: '14px', fontWeight: 600 }}>241 Verified Vehicles</span>
           </div>
@@ -94,7 +110,7 @@ export default function MarketplaceHome() {
         </div>
 
         {/* Automotive Command Center Search */}
-        <div style={{ width: '100%', maxWidth: '800px', display: 'flex', flexDirection: 'column', gap: '16px', marginTop: '8px' }}>
+        <div style={{ width: '100%', maxWidth: '800px', display: 'flex', flexDirection: 'column', gap: '16px', marginTop: '8px', position: 'relative', zIndex: 1 }}>
           <div className="command-center-wrapper" style={{ position: 'relative', width: '100%' }}>
             <div className="command-center-icon" style={{ position: 'absolute', left: '20px', top: '0', bottom: '0', display: 'flex', alignItems: 'center', pointerEvents: 'none', color: 'var(--cyan-primary)' }}>
               <Command size={24} />
@@ -151,6 +167,9 @@ export default function MarketplaceHome() {
           </div>
         </div>
       </GlassCard>
+
+      {/* Live Marketplace Metrics */}
+      <MarketplaceEnergy />
 
       {/* 2. Trust Categories */}
       <div>
