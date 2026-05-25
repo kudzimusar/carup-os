@@ -50,11 +50,11 @@ export default function MarketplaceHome() {
 
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '36px' }}>
       
       {/* 1. Hero Search */}
       <GlassCard className="active-neon-sweep" style={{
-        padding: '48px 32px',
+        padding: '52px 36px',
         textAlign: 'center',
         background: 'linear-gradient(135deg, rgba(22, 27, 46, 0.8) 0%, rgba(11, 16, 32, 0.95) 100%)',
         display: 'flex',
@@ -67,10 +67,10 @@ export default function MarketplaceHome() {
           <Badge variant="primary" style={{ padding: '6px 12px' }}>
             <Sparkles size={14} /> AI-Powered OS
           </Badge>
-          <h1 style={{ fontSize: '42px', lineHeight: '1.1', maxWidth: '800px' }}>
+          <h1 style={{ fontSize: '38px', lineHeight: '1.08', maxWidth: '860px', letterSpacing: '-0.02em' }}>
             Zimbabwe's First Trust-Driven Automotive Ecosystem
           </h1>
-          <p style={{ color: 'var(--text-muted)', maxWidth: '640px', fontSize: '16px' }}>
+          <p style={{ color: 'var(--text-muted)', maxWidth: '720px', fontSize: '17px', lineHeight: 1.6 }}>
             Every listing verified by blockchain telemetry and government registries. Buy with zero risk.
           </p>
         </div>
@@ -79,7 +79,7 @@ export default function MarketplaceHome() {
         <div style={{
           display: 'flex',
           gap: '24px',
-          padding: '12px 24px',
+          padding: '14px 26px',
           background: 'rgba(0, 0, 0, 0.3)',
           borderRadius: '100px',
           border: '1px solid var(--border-glass)',
@@ -123,8 +123,8 @@ export default function MarketplaceHome() {
               className="form-input command-center-input" 
               style={{ 
                 width: '100%', 
-                padding: '24px 24px 24px 60px', 
-                fontSize: '18px', 
+                padding: '20px 24px 20px 58px', 
+                fontSize: '16px', 
                 borderRadius: '32px', 
                 background: 'rgba(0,0,0,0.6)',
                 border: '2px solid rgba(14, 165, 233, 0.3)',
@@ -151,7 +151,7 @@ export default function MarketplaceHome() {
                 style={{ 
                   padding: '8px 16px', 
                   borderRadius: '100px', 
-                  fontSize: '13px', 
+                  fontSize: '14px', 
                   color: 'var(--text-muted)', 
                   cursor: 'pointer',
                   display: 'flex',
@@ -172,8 +172,8 @@ export default function MarketplaceHome() {
 
 
       {/* 1.5 Discovery Layer */}
-      <GlassCard style={{ padding: '20px', display: 'grid', gridTemplateColumns: '2fr repeat(3, 1fr)', gap: '12px', alignItems: 'center' }}>
-        <div style={{ color: 'var(--text-muted)', fontSize: '14px' }}>Live discovery filters</div>
+      <GlassCard style={{ padding: '22px', display: 'grid', gridTemplateColumns: '1.5fr repeat(3, 1fr)', gap: '14px', alignItems: 'center' }}>
+        <div style={{ color: 'var(--text-muted)', fontSize: '14px' }}>Marketplace filters</div>
         <select className="form-input" value={selectedMake} onChange={(e) => setSelectedMake(e.target.value)}>
           <option value="All">All Makes</option>
           <option value="Toyota">Toyota</option>
@@ -197,22 +197,22 @@ export default function MarketplaceHome() {
       </GlassCard>
 
       {/* 1.6 Featured Ecosystem */}
-      <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr', gap: '16px' }}>
-        <GlassCard style={{ padding: '18px' }}>
-          <h3 style={{ marginBottom: '10px' }}>Featured Dealers</h3>
+      <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr', gap: '18px' }}>
+        <GlassCard style={{ padding: '20px', minHeight: '136px' }}>
+          <h3 style={{ marginBottom: '12px', fontSize: '18px', letterSpacing: '-0.01em' }}>Featured Dealers</h3>
           <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
             {featuredDealers.map((dealer) => (
               <button key={dealer} className="btn-secondary" style={{ fontSize: '12px', padding: '8px 12px' }} onClick={() => navigate(`/dealer/${encodeURIComponent(dealer)}`)}>{dealer}</button>
             ))}
           </div>
         </GlassCard>
-        <GlassCard style={{ padding: '18px' }}>
-          <h3 style={{ marginBottom: '10px' }}>Featured Financiers</h3>
+        <GlassCard style={{ padding: '20px', minHeight: '136px' }}>
+          <h3 style={{ marginBottom: '12px', fontSize: '18px', letterSpacing: '-0.01em' }}>Featured Financiers</h3>
           <Badge variant="mid">CBZ</Badge> <Badge variant="mid">Stanbic</Badge>
         </GlassCard>
-        <GlassCard style={{ padding: '18px' }}>
-          <h3 style={{ marginBottom: '10px' }}>Trending</h3>
-          <p style={{ color: 'var(--text-muted)', fontSize: '13px' }}>Hilux · Prado · Fit</p>
+        <GlassCard style={{ padding: '20px', minHeight: '136px' }}>
+          <h3 style={{ marginBottom: '12px', fontSize: '18px', letterSpacing: '-0.01em' }}>Trending</h3>
+          <p style={{ color: 'var(--text-muted)', fontSize: '14px' }}>Hilux · Prado · Fit</p>
         </GlassCard>
       </div>
 
@@ -240,7 +240,7 @@ export default function MarketplaceHome() {
       </div>
 
       {/* 3. Horizontal Carousels */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '48px' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '40px' }}>
         
         {/* Helper function for rows */}
         {(() => {
@@ -251,7 +251,7 @@ export default function MarketplaceHome() {
                   {icon}
                   {title}
                 </h2>
-                <button className="btn-secondary" style={{ padding: '8px 16px', fontSize: '13px' }}>View All</button>
+                <button className="btn-secondary" style={{ padding: '8px 16px', fontSize: '14px' }}>View All</button>
               </div>
               
               <div style={{ 
@@ -263,7 +263,7 @@ export default function MarketplaceHome() {
               }} className="hide-scrollbar horizontal-carousel">
                 {loading ? (
                   Array(4).fill(0).map((_, i) => (
-                    <div key={i} style={{ minWidth: '340px', maxWidth: '340px', flexShrink: 0 }}>
+                    <div key={i} style={{ minWidth: '320px', maxWidth: '320px', flexShrink: 0 }}>
                       <GlassCard style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                         <Skeleton height="160px" borderRadius="12px" />
                         <Skeleton height="24px" width="60%" />
@@ -282,7 +282,7 @@ export default function MarketplaceHome() {
                   </div>
                 ) : (
                   items.map(vehicle => (
-                    <div key={vehicle.vin} style={{ minWidth: '340px', maxWidth: '340px', flexShrink: 0 }}>
+                    <div key={vehicle.vin} style={{ minWidth: '320px', maxWidth: '320px', flexShrink: 0 }}>
                       <IntelligenceCard vehicle={vehicle} />
                     </div>
                   ))
@@ -351,7 +351,7 @@ export default function MarketplaceHome() {
           <button 
             className="btn-primary active-neon-sweep" 
             style={{ 
-              padding: '16px 24px', 
+              padding: '14px 22px', 
               fontSize: '16px', 
               borderRadius: '30px', 
               boxShadow: '0 8px 32px rgba(14, 165, 233, 0.4)',
