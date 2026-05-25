@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
-import { Sparkles, FileText, CheckSquare, Shield, ShieldAlert, Bot, X, ShoppingCart } from 'lucide-react';
+import { Sparkles, FileText, Shield, ShieldAlert, Bot, X, ShoppingCart } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { ReservationLedger } from '../ui/ReservationLedger';
 import './MainLayout.css';
@@ -11,6 +11,15 @@ export default function MainLayout() {
   const [isGutuDrawerOpen, setIsGutuDrawerOpen] = useState(false);
   const [isCartOpen, setIsCartOpen] = useState(false);
   const { cartItems } = useApp();
+
+
+  const ecosystemLinks = [
+    { label: 'Insurance', to: '/content/insurance' },
+    { label: 'Financing', to: '/content/financing' },
+    { label: 'Garages', to: '/garage' },
+    { label: 'Imports', to: '/content/imports' },
+    { label: 'Dealers', to: '/content/dealers' }
+  ];
 
   const navItems = [
     { path: '/', label: 'Market', icon: <Sparkles size={20} /> },
@@ -99,6 +108,19 @@ export default function MainLayout() {
              </button>
           </div>
         </header>
+
+        <div className="ecosystem-links hidden-mobile" style={{ display: 'flex', gap: '10px', padding: '0 6px 12px 6px', flexWrap: 'wrap' }}>
+          {ecosystemLinks.map((link) => (
+            <button
+              key={link.to}
+              className="btn-secondary"
+              style={{ padding: '8px 12px', fontSize: '12px' }}
+              onClick={() => navigate(link.to)}
+            >
+              {link.label}
+            </button>
+          ))}
+        </div>
 
         <main className="content-area">
           <Outlet />
