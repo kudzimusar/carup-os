@@ -453,7 +453,7 @@ export const AppProvider = ({ children }) => {
 
     const data = await response.json()
     if (data.success) {
-      setVehicles(prev => prev.map(v => v.vin === data.vehicle.vin ? data.vehicle : v))
+      setVehicles(prev => prev.map(v => v.vin === data.vehicle.vin ? { ...data.vehicle, historyReport: buildVehicleHistoryReport(data.vehicle) } : v))
       setNotifications(prev => prev.filter(n => n.id !== notificationId))
     }
   }
@@ -475,7 +475,7 @@ export const AppProvider = ({ children }) => {
 
     const data = await response.json()
     if (data.success) {
-      setVehicles(prev => prev.map(v => v.vin === data.vehicle.vin ? data.vehicle : v))
+      setVehicles(prev => prev.map(v => v.vin === data.vehicle.vin ? { ...data.vehicle, historyReport: buildVehicleHistoryReport(data.vehicle) } : v))
       setNotifications(prev => prev.filter(n => n.id !== notificationId))
     }
   }
